@@ -37,7 +37,7 @@ export function showFallback(reason: Reason) {
       <section aria-labelledby="fb-about"><p class="eyebrow">Lumos</p><h2 id="fb-about">${esc(portfolio.about.heading)}</h2></section>
       <section aria-labelledby="fb-proj"><p class="eyebrow">Accio</p><h2 id="fb-proj">Projects</h2></section>
       <section aria-labelledby="fb-asp"><p class="eyebrow">Expecto Patronum</p><h2 id="fb-asp">${esc(portfolio.aspirations.heading)}</h2></section>
-      <section aria-labelledby="fb-contact"><p class="eyebrow">Alohomora</p><h2 id="fb-contact">${esc(portfolio.contact.heading)}</h2></section>
+      <section aria-labelledby="fb-contact"><p class="eyebrow">Lumos Maxima</p><h2 id="fb-contact">${esc(portfolio.contact.heading)}</h2></section>
     </div>`;
   const sections = el.querySelectorAll('section');
   sections[0].append(aboutBody());

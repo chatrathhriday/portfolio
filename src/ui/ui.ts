@@ -109,7 +109,7 @@ export const ui = {
   },
 
   /* ── Bottom-centre actions (cast / continue) ──────────────────────── */
-  showCast(spell: string, onCast: () => void, sub?: string) {
+  showCast(spell: string, onCast: () => void, sub?: string, secondary?: { label: string; onClick: () => void }) {
     actionsEl.innerHTML = '';
     const b = $<HTMLButtonElement>(
       `<button class="cast" type="button" data-primary><span class="cast-glyph">${icons.wand}</span><span class="cast-text"><span class="cast-verb">Cast</span><span class="cast-name">${spell}</span>${sub ? `<span class="cast-sub">${sub}</span>` : ''}</span><kbd>Space</kbd></button>`,
@@ -120,7 +120,35 @@ export const ui = {
       onCast();
     });
     actionsEl.append(b);
+    if (secondary) {
+      const g = $<HTMLButtonElement>(`<button class="go ghost" type="button">${secondary.label}</button>`);
+      g.addEventListener('click', () => {
+        audio.ui();
+        secondary.onClick();
+      });
+      actionsEl.append(g);
+    }
     actionsEl.classList.add('on');
+  },
+
+  /** Cinematic title card: fades in, holds, fades out. */
+  caption(c: { eyebrow?: string; title: string; sub?: string }, holdMs = 4200) {
+    const el = $(`<div class="caption" aria-live="polite">${c.eyebrow ? `<p class="cap-eyebrow">${c.eyebrow}</p>` : ''}<p class="cap-title">${c.title}</p>${c.sub ? `<p class="cap-sub">${c.sub}</p>` : ''}</div>`);
+    root.querySelectorAll('.caption').forEach((o) => {
+      o.classList.remove('on');
+      setTimeout(() => o.remove(), 1200);
+    });
+    root.append(el);
+    void el.offsetWidth;
+    el.classList.add('on');
+    setTimeout(() => {
+      el.classList.remove('on');
+      setTimeout(() => el.remove(), 1400);
+    }, dur(holdMs / 1000, holdMs / 1000) * 1000);
+  },
+
+  clearCaptions() {
+    root.querySelectorAll('.caption').forEach((o) => o.remove());
   },
 
   showAction(label: string, onClick: () => void, secondary?: { label: string; onClick: () => void }) {
@@ -225,7 +253,7 @@ const CHAPTERS: { s: Section; num: string; spell?: string; title: string }[] = [
   { s: 'about', num: 'III', spell: 'Lumos', title: 'About me' },
   { s: 'projects', num: 'IV', spell: 'Accio', title: 'Projects' },
   { s: 'aspirations', num: 'V', spell: 'Expecto Patronum', title: 'Aspirations' },
-  { s: 'contact', num: 'VI', spell: 'Alohomora', title: 'Contact' },
+  { s: 'contact', num: 'VI', spell: 'Lumos Maxima', title: 'Contact' },
 ];
 
 function buildSpellbook() {

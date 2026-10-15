@@ -18,9 +18,23 @@ import { audio } from '../../core/audio';
 import { settings } from '../../core/settings';
 import { ui } from '../../ui/ui';
 import { isTouch } from '../../core/quality';
+import { environment, model, pbr, sky as loadSky, type PbrMaps } from '../../core/assets';
+import type { CastleTextures } from '../../world/castle';
+import { portfolio } from '../../content/portfolio';
 
 const CASTLE_Z = -340;
-const RIDE_SECONDS = 24;
+const RIDE_SECONDS = 30;
+/** Rotates the photographic sky so its moon sits beside the castle. */
+const SKY_ROT = 0;
+
+interface LakeAssets {
+  castle: CastleTextures;
+  wood: PbrMaps;
+  sky: THREE.Texture | null;
+  env: THREE.Texture | null;
+  lantern: THREE.Group | null;
+  lanterns: (THREE.Group | null)[];
+}
 
 class LakeScene extends BaseScene {
   readonly id = 'lake' as const;
@@ -41,7 +55,9 @@ class LakeScene extends BaseScene {
   private t = 0;
   private lookAt = new THREE.Vector3();
 
-  constructor(ctx: SceneContext) {
+  private captionIdx = 0;
+
+  constructor(ctx: SceneContext, a: LakeAssets) {
     super(ctx);
     const q = ctx.engine.quality;
     this.baseFov = 55;
@@ -51,7 +67,17 @@ class LakeScene extends BaseScene {
     this.scene.background = new THREE.Color(0x050a16);
 
     this.sky = makeSky({ top: 0x02060f, horizon: 0x101d33, moonDir: this.moonDir, moonColor: 0xe6eeff, stars: 1.2, clouds: 0.55, radius: 1500 });
-    this.scene.add(this.sky.mesh);
+    if (a.sky) {
+      // photographic moonlit sky; the procedural sky stays as the fallback
+      this.scene.background = a.sky;
+      this.scene.backgroundIntensity = 0.3;
+      this.scene.backgroundRotation.set(0, SKY_ROT, 0);
+    } else this.scene.add(this.sky.mesh);
+    if (a.env) {
+      this.scene.environment = a.env;
+      this.scene.environmentIntensity = 0.35;
+      this.scene.environmentRotation.set(0, SKY_ROT, 0);
+    }
     this.scene.add(new THREE.HemisphereLight(0x3a5280, 0x05070c, 0.5));
     const moon = new THREE.DirectionalLight(0xb4c6ee, 1.1);
     moon.position.copy(this.moonDir).multiplyScalar(300);
@@ -74,20 +100,13 @@ class LakeScene extends BaseScene {
     this.scene.add(this.water);
 
     // Castle on the far shore
-    this.castle = buildCastle();
+    this.castle = buildCastle(a.castle);
     this.castle.group.position.set(0, 0, CASTLE_Z);
     this.scene.add(this.castle.group);
 
-    // Distant hills
-    const hillMat = new THREE.MeshStandardMaterial({ color: 0x0b111c, roughness: 1, flatShading: true });
-    for (let i = 0; i < 18; i++) {
-      const a = (i / 18) * Math.PI * 2;
-      const r = 520 + (i % 3) * 60;
-      const h = 60 + ((i * 37) % 70);
-      const hill = new THREE.Mesh(new THREE.ConeGeometry(140 + (i % 4) * 30, h, 6), hillMat);
-      hill.position.set(Math.sin(a) * r, h / 2 - 8, Math.cos(a) * r - 200);
-      hill.rotation.y = i;
-      this.scene.add(hill);
+    // Distant mountains: two smooth, layered ridgelines around the lake
+    for (const [r, hMax, col, seed] of [[470, 70, 0x0a0f18, 1.3], [640, 120, 0x0d1420, 4.1]] as const) {
+      this.scene.add(ridge(r, hMax, col, seed, a.castle.rock));
     }
 
     // Path across the lake toward the boathouse arch
@@ -102,11 +121,11 @@ class LakeScene extends BaseScene {
     ]);
 
     // Our boat + the fleet of first-years
-    this.boat = buildBoat({ withLight: true });
+    this.boat = buildBoat({ withLight: true, wood: a.wood, lanternModel: a.lantern });
     this.scene.add(this.boat.group);
     const fleet = [new THREE.Vector3(-6, 0, -6), new THREE.Vector3(7, 0, -11), new THREE.Vector3(-11, 0, 9), new THREE.Vector3(12, 0, 6), new THREE.Vector3(2, 0, -20), new THREE.Vector3(-16, 0, -18)];
     for (const off of fleet.slice(0, q.tier === 'low' ? 4 : 6)) {
-      const b = buildBoat();
+      const b = buildBoat({ wood: a.wood, lanternModel: a.lanterns[this.others.length] ?? null });
       this.scene.add(b.group);
       this.others.push({ boat: b, offset: off, phase: Math.random() * 10 });
     }
@@ -224,6 +243,7 @@ class LakeScene extends BaseScene {
     this.riding = !skipped;
     ui.setSkippable(false);
     ui.hint(null);
+    ui.clearCaptions();
     this.ctx.director.next('dark');
   }
 
@@ -237,6 +257,11 @@ class LakeScene extends BaseScene {
       // ease in at the start, slow down gently near the arch
       const ease = Math.min(1, 0.35 + this.progress * 6) * (this.progress > 0.92 ? 0.6 : 1);
       this.progress = Math.min(1, this.progress + dt * base * this.speed * ease);
+      const caps = portfolio.lakeCaptions;
+      while (this.captionIdx < caps.length && this.progress >= caps[this.captionIdx].at) {
+        ui.caption(caps[this.captionIdx], 4300);
+        this.captionIdx++;
+      }
       if (this.progress >= 1) this.arrive(false);
       if (this.progress > 0.965 && !this.arrived) this.arrive(false);
     }
@@ -258,4 +283,51 @@ class LakeScene extends BaseScene {
   }
 }
 
-export default (ctx: SceneContext) => new LakeScene(ctx);
+/** A ring of mountains whose height varies smoothly with angle (layered sines). */
+function ridge(radius: number, hMax: number, color: number, seed: number, rock: PbrMaps) {
+  const seg = 256;
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  const centre = new THREE.Vector3(0, 0, -200);
+  for (let i = 0; i <= seg; i++) {
+    const a = (i / seg) * Math.PI * 2;
+    const n =
+      0.5 +
+      0.28 * Math.sin(a * 3 + seed) +
+      0.14 * Math.sin(a * 7.3 + seed * 2.1) +
+      0.07 * Math.sin(a * 17.1 + seed * 0.7) +
+      0.03 * Math.sin(a * 41 + seed);
+    // keep a lower saddle behind the castle so it stands proud of the skyline
+    const behindCastle = Math.exp(-Math.pow(((a - Math.PI + 2 * Math.PI) % (2 * Math.PI)) - Math.PI, 2) * 6);
+    const h = Math.max(8, hMax * n * (1 - behindCastle * 0.55));
+    const x = centre.x + Math.sin(a) * radius, z = centre.z + Math.cos(a) * radius;
+    pos.push(x, -12, z, x, h, z);
+    uv.push((i / seg) * 40, 0, (i / seg) * 40, h / 30);
+  }
+  for (let i = 0; i < seg; i++) {
+    const k = i * 2;
+    idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const m = new THREE.MeshStandardMaterial({ color, roughness: 1, side: THREE.DoubleSide, map: rock.map, normalMap: rock.normalMap });
+  return new THREE.Mesh(g, m);
+}
+
+export default async (ctx: SceneContext) => {
+  const [wall, roof, rock, wood, skyTex, env, lantern, ...lanterns] = await Promise.all([
+    pbr('castle_wall_slates'),
+    pbr('roof_slates_02'),
+    pbr('rock_face_03'),
+    pbr('weathered_planks'),
+    loadSky('qwantani_moonrise_puresky'),
+    environment('qwantani_moonrise_puresky', ctx.engine.renderer),
+    model('wooden_lantern_01'),
+    ...Array.from({ length: 6 }, () => model('wooden_lantern_01')),
+  ]);
+  return new LakeScene(ctx, { castle: { wall, roof, rock }, wood, sky: skyTex, env, lantern, lanterns });
+};

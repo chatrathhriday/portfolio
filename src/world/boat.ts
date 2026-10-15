@@ -1,6 +1,7 @@
 /** Open wooden rowing boat with a bow lantern. Bow points to -Z. */
 import * as THREE from 'three';
 import { woodPlanks } from '../core/textures';
+import { fitHeight, pbrMaterial, type PbrMaps } from '../core/assets';
 
 export interface Boat {
   group: THREE.Group;
@@ -9,7 +10,7 @@ export interface Boat {
   length: number;
 }
 
-export function buildBoat(opts: { length?: number; width?: number; withLight?: boolean } = {}): Boat {
+export function buildBoat(opts: { length?: number; width?: number; withLight?: boolean; wood?: PbrMaps; lanternModel?: THREE.Group | null } = {}): Boat {
   const L = opts.length ?? 3.8;
   const W = opts.width ?? 0.75; // half-width
   const D = 0.55;
@@ -44,7 +45,9 @@ export function buildBoat(opts: { length?: number; width?: number; withLight?: b
   const wood = woodPlanks([86, 54, 32], 3);
   const map = wood.map.clone();
   map.repeat.set(1, 1);
-  const mat = new THREE.MeshStandardMaterial({ map, normalMap: wood.normalMap, roughness: 0.75, side: THREE.DoubleSide, color: 0xb08a6a });
+  const mat = opts.wood
+    ? pbrMaterial(opts.wood, [1, 2], { side: THREE.DoubleSide, color: 0x9a7a5c })
+    : new THREE.MeshStandardMaterial({ map, normalMap: wood.normalMap, roughness: 0.75, side: THREE.DoubleSide, color: 0xb08a6a });
   const group = new THREE.Group();
   group.add(new THREE.Mesh(geo, mat));
 
@@ -79,10 +82,20 @@ export function buildBoat(opts: { length?: number; width?: number; withLight?: b
   group.add(pole, arm);
   lantern.position.set(0, 0.93, poleZ - 0.32);
   const lanternMat = new THREE.MeshStandardMaterial({ color: 0xffd38a, emissive: 0xffa040, emissiveIntensity: 5 });
-  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.18, 6), lanternMat);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.08, 6), rail);
-  cap.position.y = 0.13;
-  lantern.add(glass, cap);
+  if (opts.lanternModel) {
+    // real lantern model hanging from the arm, with a glowing core inside
+    const l = fitHeight(opts.lanternModel, 0.36);
+    l.position.y = -0.16;
+    lantern.add(l);
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), lanternMat);
+    core.position.y = 0.0;
+    lantern.add(core);
+  } else {
+    const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.18, 6), lanternMat);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.08, 6), rail);
+    cap.position.y = 0.13;
+    lantern.add(glass, cap);
+  }
   group.add(lantern);
   if (opts.withLight) {
     const l = new THREE.PointLight(0xffa850, 6, 9, 1.8);

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:content": "node scripts/check-content.mjs",
-    "check": "npm run typecheck && npm run check:content && vite build"
+    "check": "npm run typecheck && npm run check:content && vite build",
+    "assets": "node scripts/fetch-assets.mjs"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.1.0",
@@ -19,7 +20,9 @@
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.1.1",
     "@types/three": "^0.170.0",
+    "sharp": "^0.33.5",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"
   }

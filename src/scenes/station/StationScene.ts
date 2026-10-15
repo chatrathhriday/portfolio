@@ -9,13 +9,23 @@ import gsap from 'gsap';
 import { BaseScene } from '../BaseScene';
 import type { SceneContext, Section } from '../../core/types';
 import { buildTrain, type Train } from '../../world/train';
-import { flagstones, stoneBlocks, smokePuff, textTexture, woodPlanks } from '../../core/textures';
+import { stoneBlocks, smokePuff, textTexture, woodPlanks } from '../../core/textures';
 import { DriftField, ParticlePool } from '../../fx/particles';
 import { FlickerLight, FogLayer, makeSky } from '../../fx/atmosphere';
 import { audio } from '../../core/audio';
 import { settings, dur } from '../../core/settings';
 import { ui } from '../../ui/ui';
+import { environment, fitHeight, model, pbr, pbrMaterial, type PbrMaps } from '../../core/assets';
 import { showTicket, hideTicket } from '../../ui/ticket';
+
+interface StationAssets {
+  pavers: PbrMaps;
+  brick: PbrMaps;
+  env: THREE.Texture | null;
+  suitcase: THREE.Group | null;
+  suitcase2: THREE.Group | null;
+  lantern: THREE.Group | null;
+}
 
 class StationScene extends BaseScene {
   readonly id = 'station' as const;
@@ -34,21 +44,40 @@ class StationScene extends BaseScene {
   private fogs: FogLayer[] = [];
   private dust: DriftField;
 
-  constructor(ctx: SceneContext) {
+  constructor(ctx: SceneContext, private assets: StationAssets) {
     super(ctx);
     const q = ctx.engine.quality;
-    this.bloom = { strength: 0.9, radius: 0.65, threshold: 0.8 };
+    this.bloom = { strength: 0.75, radius: 0.6, threshold: 0.85 };
+    if (assets.env) {
+      this.scene.environment = assets.env;
+      this.scene.environmentIntensity = 0.22;
+    }
     this.exposure = 1.05;
-    this.scene.fog = new THREE.FogExp2(0x0c1626, 0.02);
+    this.scene.fog = new THREE.FogExp2(0x0a1220, 0.022);
     this.scene.background = new THREE.Color(0x070c18);
 
     this.sky = makeSky({ top: 0x050a18, horizon: 0x1a2a44, moonDir: new THREE.Vector3(-0.35, 0.55, -0.75), stars: 1, clouds: 0.6 });
     this.scene.add(this.sky.mesh);
 
     // Lighting: cool moonlight + warm lanterns
-    this.scene.add(new THREE.HemisphereLight(0x2a3b5c, 0x0a0806, 0.55));
-    const moon = new THREE.DirectionalLight(0x9fb4e0, 0.7);
+    this.scene.add(new THREE.HemisphereLight(0x2a3b5c, 0x0a0806, 0.3));
+    const moon = new THREE.DirectionalLight(0x9fb4e0, 0.9);
     moon.position.set(-30, 40, -25);
+    if (ctx.engine.renderer.shadowMap.enabled) {
+      moon.castShadow = true;
+      moon.shadow.mapSize.set(q.tier === 'high' ? 2048 : 1024, q.tier === 'high' ? 2048 : 1024);
+      const sc = moon.shadow.camera;
+      sc.left = -30;
+      sc.right = 20;
+      sc.top = 20;
+      sc.bottom = -12;
+      sc.near = 10;
+      sc.far = 120;
+      moon.shadow.bias = -0.0005;
+      moon.shadow.normalBias = 0.03;
+      moon.target.position.set(-6, 0, 3);
+      this.scene.add(moon.target);
+    }
     this.scene.add(moon);
 
     this.buildGround();
@@ -56,9 +85,12 @@ class StationScene extends BaseScene {
     this.buildShed();
 
     this.train = buildTrain(3);
+    this.train.group.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = true;
+    });
     this.scene.add(this.train.group);
-    const windowGlow = new THREE.PointLight(0xffa850, 18, 16, 2);
-    windowGlow.position.set(-14, 3, 2.5);
+    const windowGlow = new THREE.PointLight(0xffa850, 6, 10, 2);
+    windowGlow.position.set(-20, 2.6, 4.5);
     this.scene.add(windowGlow);
 
     this.steam = new ParticlePool(Math.round(420 * Math.max(0.5, q.particles)), { texture: smokePuff(), additive: false, fadeIn: 0.12 });
@@ -84,7 +116,7 @@ class StationScene extends BaseScene {
     f1.position.set(0, 0.6, -6);
     const f2 = new FogLayer({ width: 160, depth: 40, color: 0x34445e, opacity: 0.22, scale: 0.04, vertical: true, speed: new THREE.Vector2(0.03, 0.0) });
     f2.position.set(0, 4, -22);
-    const f3 = new FogLayer({ width: 160, depth: 12, color: 0x9aaccc, opacity: 0.18, scale: 0.08, speed: new THREE.Vector2(-0.04, 0.02), nearFade: 3 });
+    const f3 = new FogLayer({ width: 160, depth: 12, color: 0x55657f, opacity: 0.1, scale: 0.08, speed: new THREE.Vector2(-0.04, 0.02), nearFade: 3 });
     f3.position.set(0, 1.4, 5);
     this.fogs.push(f1, f2, f3);
     this.scene.add(f1, f2, f3);
@@ -124,24 +156,20 @@ class StationScene extends BaseScene {
   }
 
   private buildPlatform(maxLights: number) {
-    const flags = flagstones(21);
-    flags.map.repeat.set(30, 2);
-    flags.normalMap.repeat.set(30, 2);
-    // Wet stone: low roughness picks up lamp reflections.
-    const top = new THREE.MeshStandardMaterial({ map: flags.map, normalMap: flags.normalMap, normalScale: new THREE.Vector2(0.35, 0.35), roughness: 0.3, metalness: 0.1, color: 0x9a9a9a });
+    // Wet paving: the roughness multiplier < 1 makes puddled stone catch the lamps.
+    const top = pbrMaterial(this.assets.pavers, [64, 3.2], { roughness: 0.5, color: 0x5e5e5e, normalScale: new THREE.Vector2(0.8, 0.8) });
     const side = new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.8 });
     const plat = new THREE.Mesh(new THREE.BoxGeometry(160, 1.05, 8), [side, side, top, side, side, side]);
     plat.position.set(0, 0.525, 6);
+    plat.receiveShadow = true;
     this.scene.add(plat);
     const coping = new THREE.Mesh(new THREE.BoxGeometry(160, 0.08, 0.4), new THREE.MeshStandardMaterial({ color: 0xb8ab88, roughness: 0.5 }));
     coping.position.set(0, 1.08, 2.2);
     this.scene.add(coping);
 
     // back wall with arched windows
-    const brick = stoneBlocks('brick', { rows: 16, cols: 6, tint: [96, 58, 44], seed: 8 });
-    brick.map.repeat.set(24, 2);
-    brick.normalMap.repeat.set(24, 2);
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(160, 9), new THREE.MeshStandardMaterial({ map: brick.map, normalMap: brick.normalMap, roughness: 0.85 }));
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(160, 9), pbrMaterial(this.assets.brick, [40, 2.4], { color: 0x9a8070 }));
+    wall.receiveShadow = true;
     wall.position.set(0, 5.5, 10);
     wall.rotation.y = Math.PI;
     this.scene.add(wall);
@@ -238,8 +266,32 @@ class StationScene extends BaseScene {
       t.add(band);
       this.scene.add(t);
     };
-    trunk(-6.5, 3.6, 0, 1, 0.2);
-    trunk(-6.4, 3.6, 0.6, 0.85, -0.1);
+    const props: [THREE.Group | null, number, number, number, number, number][] = [
+      [this.assets.suitcase, -6.5, 3.6, 0, 0.55, 0.2],
+      [this.assets.suitcase2, -6.35, 3.62, 0.55, 0.45, -0.15],
+    ];
+    let placed = 0;
+    for (const [m, x, z, y, h, r] of props) {
+      if (!m) continue;
+      const w = fitHeight(m, h);
+      w.position.set(x, 1.05 + y, z);
+      w.rotation.y = r;
+      w.traverse((o) => ((o as THREE.Mesh).isMesh ? (o.castShadow = o.receiveShadow = true) : null));
+      this.scene.add(w);
+      placed++;
+    }
+    if (!placed) {
+      trunk(-6.5, 3.6, 0, 1, 0.2);
+      trunk(-6.4, 3.6, 0.6, 0.85, -0.1);
+    }
+    if (this.assets.lantern) {
+      const l = fitHeight(this.assets.lantern, 0.42);
+      l.position.set(-5.6, 1.05, 3.3);
+      this.scene.add(l);
+      const glow = new THREE.PointLight(0xffa850, 2.5, 4, 2);
+      glow.position.set(-5.6, 1.3, 3.3);
+      this.scene.add(glow);
+    }
     trunk(-5.4, 3.2, 0, 0.8, 0.5);
     trunk(7.5, 4.2, 0, 1.1, -0.3);
     const cage = new THREE.Group();
@@ -283,7 +335,7 @@ class StationScene extends BaseScene {
     audio.ambience('station');
     this.ctx.director.markVisited('station');
     const reduced = settings.get().reducedMotion;
-    const end = new THREE.Vector3(-13.5, 2.5, 9.3);
+    const end = new THREE.Vector3(-12.5, 2.3, 7.4);
     const look = new THREE.Vector3(2, 3.0, 0);
     if (section === 'station' || reduced) {
       this.camera.position.copy(end);
@@ -296,7 +348,7 @@ class StationScene extends BaseScene {
     const from = { t: 0 };
     const start = this.camera.position.clone();
     const startLook = new THREE.Vector3(-10, 4, 0);
-    const curve = new THREE.CatmullRomCurve3([start, new THREE.Vector3(-20, 5.5, 15), new THREE.Vector3(-16, 3.2, 11), end]);
+    const curve = new THREE.CatmullRomCurve3([start, new THREE.Vector3(-20, 5.5, 14), new THREE.Vector3(-16, 3.2, 9.5), end]);
     tl.to(from, {
       t: 1,
       duration: 7.5,
@@ -504,4 +556,14 @@ function clockFace() {
   return t;
 }
 
-export default (ctx: SceneContext) => new StationScene(ctx);
+export default async (ctx: SceneContext) => {
+  const [pavers, brick, env, suitcase, suitcase2, lantern] = await Promise.all([
+    pbr('stone_pavers'),
+    pbr('brick_wall_02'),
+    environment('dresden_station_night', ctx.engine.renderer),
+    model('vintage_suitcase'),
+    model('vintage_suitcase'),
+    model('wooden_lantern_01'),
+  ]);
+  return new StationScene(ctx, { pavers, brick, env, suitcase, suitcase2, lantern });
+};

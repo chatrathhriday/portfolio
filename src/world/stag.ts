@@ -162,7 +162,7 @@ export class Stag {
         }`,
       fragmentShader: /* glsl */ `
         uniform vec3 uColor; uniform float uFade; varying float vA;
-        void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); gl_FragColor = vec4(uColor * (0.8 + 0.8 * smoothstep(0.2, 0.0, d)), a * vA * uFade * 0.75); }`,
+        void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d); gl_FragColor = vec4(uColor * (0.8 + 0.8 * smoothstep(0.2, 0.0, d)), a * vA * uFade * 0.6); }`,
     });
     this.points = new THREE.Points(geo, this.material);
     this.points.frustumCulled = false;
@@ -175,7 +175,7 @@ export class Stag {
 
   update(t: number) {
     this.material.uniforms.uTime.value = t;
-    (this.aura.material as THREE.SpriteMaterial).opacity = this.material.uniforms.uForm.value * 0.35 * this.material.uniforms.uFade.value;
+    (this.aura.material as THREE.SpriteMaterial).opacity = this.material.uniforms.uForm.value * 0.13 * (1 - this.material.uniforms.uGait.value * 0.6) * this.material.uniforms.uFade.value;
   }
 
   dispose() {

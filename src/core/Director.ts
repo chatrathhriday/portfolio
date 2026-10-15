@@ -10,22 +10,20 @@ import { audio } from './audio';
 const loaders: Record<SceneId, () => Promise<{ default: SceneFactory }>> = {
   station: () => import('../scenes/station/StationScene'),
   lake: () => import('../scenes/lake/LakeScene'),
-  corridor: () => import('../scenes/corridor/CorridorScene'),
-  chamber: () => import('../scenes/chamber/ChamberScene'),
+  hall: () => import('../scenes/hall/GreatHallScene'),
 };
 
-const ORDER: SceneId[] = ['station', 'lake', 'corridor', 'chamber'];
+const ORDER: SceneId[] = ['station', 'lake', 'hall'];
 
 /** Veil used when arriving at a scene along the natural journey. */
 const ARRIVAL_VEIL: Record<SceneId, VeilKind> = {
   station: 'dark',
   lake: 'steam',
-  corridor: 'dark',
-  chamber: 'silver',
+  hall: 'dark',
 };
 
 export const sceneOf = (s: Section): SceneId =>
-  s === 'station' ? 'station' : s === 'lake' ? 'lake' : s === 'contact' ? 'chamber' : 'corridor';
+  s === 'station' ? 'station' : s === 'lake' ? 'lake' : 'hall';
 
 export class Director {
   private current: WorldScene | null = null;

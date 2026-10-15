@@ -1,5 +1,5 @@
 /**
- * Enchanted objects that represent projects in the corridor:
+ * Enchanted objects that represent projects in the Great Hall:
  *  - tome    (ProxyProof): a leather spellbook whose cover opens on inspection
  *  - orrery  (Envelope):   a miniature building inside turning brass rings and heat halos
  *  - orb     (OceanNova):  a crystal ball with a living ocean inside

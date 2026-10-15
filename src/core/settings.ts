@@ -2,7 +2,7 @@
 
 type Listener = () => void;
 
-const KEY = 'hp-portfolio-settings-v1';
+const KEY = 'hp-portfolio-settings-v2';
 
 function load(): Partial<SettingsState> {
   try {
@@ -23,7 +23,7 @@ const prefersReduced =
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state: SettingsState = {
-  sound: true,
+  sound: false, // off until the visitor turns it on
   reducedMotion: prefersReduced,
   lightGraphics: false,
   ...load(),

@@ -2,6 +2,7 @@
 import { portfolio } from '../content/portfolio';
 import { esc } from './content';
 import { audio } from '../core/audio';
+import { settings } from '../core/settings';
 
 let el: HTMLElement | null = null;
 
@@ -24,6 +25,7 @@ export function showTicket(onBoard: () => void) {
           <div><dt>Departs</dt><dd>${esc(t.departs)}</dd></div>
         </dl>
         <button type="button" class="board" data-primary>Punch ticket &amp; board <span aria-hidden="true">→</span></button>
+        <button type="button" class="sound-invite" aria-pressed="false"></button>
       </div>
       <span class="punch" aria-hidden="true"></span>
     </article>`;
@@ -31,6 +33,18 @@ export function showTicket(onBoard: () => void) {
   void el.offsetWidth;
   el.classList.add('on');
   const btn = el.querySelector<HTMLButtonElement>('.board')!;
+  const invite = el.querySelector<HTMLButtonElement>('.sound-invite')!;
+  const paint = () => {
+    const on = settings.get().sound;
+    invite.textContent = on ? '♪ Sound and music on' : '♪ Travel with sound and music';
+    invite.setAttribute('aria-pressed', String(on));
+  };
+  paint();
+  const off = settings.on(paint);
+  invite.addEventListener('click', () => {
+    audio.unlock();
+    settings.set('sound', !settings.get().sound);
+  });
   btn.addEventListener('click', () => {
     audio.unlock();
     audio.ticketPunch();
@@ -50,7 +64,10 @@ export function showTicket(onBoard: () => void) {
     }
   };
   document.addEventListener('keydown', key, true);
-  (el as HTMLElement & { _off?: () => void })._off = () => document.removeEventListener('keydown', key, true);
+  (el as HTMLElement & { _off?: () => void })._off = () => {
+    document.removeEventListener('keydown', key, true);
+    off();
+  };
 }
 
 export function hideTicket(instant = false) {

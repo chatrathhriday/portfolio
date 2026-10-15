@@ -1,7 +1,6 @@
 /**
- * The great arched double door with a rune lock. Shared by the end of the
- * corridor (closed, glowing when the Patronus arrives) and the final chamber
- * (opened by Alohomora).
+ * The great arched double door. Used as the entrance to the Great Hall; it
+ * also carries an optional rune-lock ring (hidden there).
  */
 import * as THREE from 'three';
 import { stoneBlocks, woodPlanks } from '../core/textures';

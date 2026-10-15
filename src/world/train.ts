@@ -20,10 +20,11 @@ const RED = 0x7d1414;
 
 export function buildTrain(coaches = 3): Train {
   const group = new THREE.Group();
-  const red = new THREE.MeshStandardMaterial({ color: RED, roughness: 0.32, metalness: 0.35 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x0d0d0f, roughness: 0.55, metalness: 0.5 });
-  const brass = new THREE.MeshStandardMaterial({ color: 0xc8a050, roughness: 0.25, metalness: 0.95 });
-  const steel = new THREE.MeshStandardMaterial({ color: 0x55565a, roughness: 0.35, metalness: 0.9 });
+  // Glossy enamel with a clear coat: picks up the station's lamps through the environment map.
+  const red = new THREE.MeshPhysicalMaterial({ color: RED, roughness: 0.42, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08 });
+  const black = new THREE.MeshPhysicalMaterial({ color: 0x0b0b0d, roughness: 0.5, metalness: 0.55, clearcoat: 0.4, clearcoatRoughness: 0.3 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xd4a957, roughness: 0.22, metalness: 1 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x6a6c72, roughness: 0.3, metalness: 1 });
   const wheels: THREE.Object3D[] = [];
   const rods: THREE.Object3D[] = [];
   const windowMats: THREE.MeshStandardMaterial[] = [];
@@ -34,7 +35,7 @@ export function buildTrain(coaches = 3): Train {
     parent.add(m);
     return m;
   };
-  const cylX = (r: number, l: number, seg = 24, r2 = r) => new THREE.CylinderGeometry(r2, r, l, seg).rotateZ(Math.PI / 2);
+  const cylX = (r: number, l: number, seg = 40, r2 = r) => new THREE.CylinderGeometry(r2, r, l, seg).rotateZ(Math.PI / 2);
 
   /* ── Locomotive ── */
   const loco = new THREE.Group();
@@ -48,8 +49,14 @@ export function buildTrain(coaches = 3): Train {
   // running boards
   add(new THREE.BoxGeometry(9.5, 0.08, 2.95), black, 0.4, 1.95);
   // boiler
-  const boiler = add(cylX(1.02, 6.2, 36), red, 1.0, 2.95);
-  boiler.castShadow = true;
+  add(cylX(1.02, 6.2, 64), red, 1.0, 2.95);
+  // handrails and feed pipes along the boiler
+  for (const z of [-1.12, 1.12]) {
+    const rail = add(cylX(0.022, 6.0, 8), brass, 1.2, 3.55, z);
+    rail.scale.z = 1;
+    for (const x of [-1.5, 0.3, 2.1, 3.8]) add(new THREE.CylinderGeometry(0.015, 0.015, 0.12, 6).rotateX(Math.PI / 2), brass, x, 3.55, z * 0.95);
+    add(cylX(0.05, 5.2, 10), steel, 0.8, 2.25, z * 0.92);
+  }
   for (const x of [-1.8, -0.2, 1.4, 3.0]) add(cylX(1.04, 0.07, 36), brass, x, 2.95);
   // smokebox + door
   add(cylX(1.08, 1.3, 36), black, 4.65, 2.95);
@@ -180,33 +187,24 @@ export function buildTrain(coaches = 3): Train {
 
   /* ── Coaches ── */
   const coachLen = 13;
-  const winTex = coachWindowTexture();
+  const livery = coachLivery();
   for (let c = 0; c < coaches; c++) {
     const coach = new THREE.Group();
     coach.position.x = -6.4 - 2.1 - 0.6 - coachLen / 2 - c * (coachLen + 0.8);
     group.add(coach);
-    const body = new THREE.Mesh(new THREE.BoxGeometry(coachLen, 2.6, 2.9), red);
+    const sideMat = new THREE.MeshPhysicalMaterial({ map: livery.map, emissive: 0xffffff, emissiveMap: livery.glow, emissiveIntensity: 0.9, roughness: 0.4, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 });
+    windowMats.push(sideMat);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(coachLen, 2.6, 2.9), [red, red, red, red, sideMat, sideMat]);
     body.position.y = 2.6;
     coach.add(body);
-    const lower = new THREE.Mesh(new THREE.BoxGeometry(coachLen + 0.02, 0.9, 2.92), new THREE.MeshStandardMaterial({ color: 0x4a0b0b, roughness: 0.4, metalness: 0.3 }));
-    lower.position.y = 1.75;
-    coach.add(lower);
-    const roofM = new THREE.Mesh(cylX(1.6, coachLen + 0.3, 28), black);
+    const roofM = new THREE.Mesh(cylX(1.6, coachLen + 0.3, 48), black);
     roofM.position.y = 3.9;
     roofM.scale.set(1, 0.26, 1);
     coach.add(roofM);
-    const brassStrip = new THREE.Mesh(new THREE.BoxGeometry(coachLen + 0.04, 0.05, 2.94), brass);
-    brassStrip.position.y = 2.2;
-    coach.add(brassStrip);
-    // window band (emissive canvas)
-    const wm = new THREE.MeshStandardMaterial({ map: winTex, emissive: 0xffffff, emissiveMap: winTex, emissiveIntensity: 1.6, roughness: 0.2, metalness: 0.1 });
-    windowMats.push(wm);
-    for (const z of [-1.46, 1.46]) {
-      const band = new THREE.Mesh(new THREE.PlaneGeometry(coachLen - 0.6, 1.0), wm);
-      band.position.set(0, 3.0, z);
-      band.rotation.y = z > 0 ? 0 : Math.PI;
-      coach.add(band);
-    }
+    // ventilators along the roof
+    for (let k = -4; k <= 4; k++) add(new THREE.CylinderGeometry(0.09, 0.11, 0.16, 10), black, k * 1.3, 4.36, 0, coach);
+    // bogies
+    for (const bx of [-coachLen / 2 + 2.3, coachLen / 2 - 2.3]) add(new THREE.BoxGeometry(2.8, 0.35, 2.1), black, bx, 0.62, 0, coach);
     const under = new THREE.Mesh(new THREE.BoxGeometry(coachLen - 1, 0.4, 2.2), black);
     under.position.y = 1.05;
     coach.add(under);
@@ -223,37 +221,90 @@ export function buildTrain(coaches = 3): Train {
   return { group, wheels, rods, chimneyTop, cylinderVents, headlamp, windowMats, length: len };
 }
 
-/** Warm coach windows with mullions and the odd passenger silhouette. */
-function coachWindowTexture() {
+/** Maroon coach side: panelling, gold lining, lit compartment windows with passengers, lettering. */
+function coachLivery() {
+  const W = 2048, H = 410;
   const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 80;
+  c.width = W;
+  c.height = H;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#5a0f0f';
-  g.fillRect(0, 0, 1024, 80);
-  const n = 8;
+  const glowC = document.createElement('canvas');
+  glowC.width = W;
+  glowC.height = H;
+  const gl = glowC.getContext('2d')!;
+  gl.fillStyle = '#000';
+  gl.fillRect(0, 0, W, H);
+  const body = g.createLinearGradient(0, 0, 0, H);
+  body.addColorStop(0, '#5a0c10');
+  body.addColorStop(0.5, '#7e1418');
+  body.addColorStop(1, '#4a0a0d');
+  g.fillStyle = body;
+  g.fillRect(0, 0, W, H);
+  const gold = '#c9a255';
+  const line = (y: number, w = 3) => {
+    g.fillStyle = gold;
+    g.fillRect(14, y, W - 28, w);
+  };
+  line(18);
+  line(26, 1.5);
+  line(H - 30);
+  line(H - 22, 1.5);
+  const n = 8, pad = 70, slot = (W - pad * 2) / n;
   for (let i = 0; i < n; i++) {
-    const x = 18 + i * (1024 / n);
-    const w = 1024 / n - 36;
-    const grd = g.createLinearGradient(0, 8, 0, 72);
-    grd.addColorStop(0, '#ffcf7a');
-    grd.addColorStop(1, '#d9822e');
-    g.fillStyle = grd;
-    g.fillRect(x, 8, w, 64);
-    // silhouettes
-    if (i % 3 !== 1) {
-      g.fillStyle = 'rgba(40,14,6,0.75)';
-      const sx = x + w * (0.3 + ((i * 37) % 10) / 25);
+    const x = pad + i * slot;
+    // door between compartments
+    g.strokeStyle = 'rgba(20,0,0,0.6)';
+    g.lineWidth = 3;
+    g.strokeRect(x - 30, 46, 22, H - 92);
+    g.fillStyle = gold;
+    g.fillRect(x - 14, H / 2 + 20, 4, 18);
+    // window: rounded, warm interior
+    const wx = x + 8, wy = 64, ww = slot - 50, wh = 150;
+    const round = (ctx: CanvasRenderingContext2D) => {
+      ctx.beginPath();
+      ctx.roundRect(wx, wy, ww, wh, 14);
+    };
+    const warm = g.createLinearGradient(0, wy, 0, wy + wh);
+    warm.addColorStop(0, '#ffd895');
+    warm.addColorStop(1, '#d98a3a');
+    g.fillStyle = warm;
+    round(g);
+    g.fill();
+    // passengers (heads + shoulders) and a luggage rack line
+    g.fillStyle = 'rgba(48,18,6,0.78)';
+    g.fillRect(wx, wy + 30, ww, 4);
+    const people = (i * 37) % 3;
+    for (let k = 0; k < people + 1; k++) {
+      const px = wx + ww * (0.22 + k * 0.28 + ((i * 13) % 7) / 60);
       g.beginPath();
-      g.arc(sx, 40, 9, 0, Math.PI * 2);
+      g.arc(px, wy + 92, 17, 0, Math.PI * 2);
       g.fill();
-      g.fillRect(sx - 15, 50, 30, 22);
+      g.beginPath();
+      g.roundRect(px - 30, wy + 112, 60, 50, 18);
+      g.fill();
     }
-    g.fillStyle = '#3a0a0a';
-    g.fillRect(x + w / 2 - 2, 8, 4, 64);
-    g.fillRect(x, 30, w, 3);
+    g.strokeStyle = gold;
+    g.lineWidth = 3;
+    round(g);
+    g.stroke();
+    gl.fillStyle = '#fff';
+    round(gl);
+    gl.fill();
+    gl.fillStyle = 'rgba(0,0,0,0.6)';
+    gl.fillRect(wx, wy + 30, ww, 4);
+    // lower panel lining
+    g.strokeStyle = 'rgba(201,162,85,0.75)';
+    g.lineWidth = 2;
+    g.strokeRect(x, 244, slot - 34, 112);
   }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+  g.fillStyle = gold;
+  g.font = '600 30px Cinzel, Georgia, serif';
+  g.textAlign = 'center';
+  g.fillText('H O G W A R T S   E X P R E S S', W / 2, 312);
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
+  const glow = new THREE.CanvasTexture(glowC);
+  glow.colorSpace = THREE.SRGBColorSpace;
+  return { map, glow };
 }

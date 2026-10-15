@@ -81,13 +81,20 @@ export abstract class BaseScene implements WorldScene {
   dispose() {
     this.timelines.forEach((t) => t.kill());
     this.cleanups.forEach((f) => f());
+    const slots = ['map', 'normalMap', 'roughnessMap', 'aoMap', 'emissiveMap', 'metalnessMap'] as const;
+    const freeMat = (x: THREE.Material) => {
+      for (const k of slots) (x as unknown as Record<string, THREE.Texture | null>)[k]?.dispose();
+      x.dispose();
+    };
     this.scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-      if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-      else mat?.dispose();
+      if (Array.isArray(mat)) mat.forEach(freeMat);
+      else if (mat) freeMat(mat);
     });
+    this.scene.environment?.dispose();
+    if (this.scene.background instanceof THREE.Texture) this.scene.background.dispose();
     this.scene.clear();
   }
 }

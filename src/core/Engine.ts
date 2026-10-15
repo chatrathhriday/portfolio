@@ -76,7 +76,11 @@ export class Engine {
     this.canvas.setAttribute('aria-hidden', 'true');
     container.appendChild(this.canvas);
 
-    this.composer = new EffectComposer(this.renderer);
+    // MSAA on the composer's own targets — without it every edge in post-processing is jagged.
+    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: this.quality.tier === 'high' ? 4 : 2 });
+    this.composer = new EffectComposer(this.renderer, rt);
+    this.renderer.shadowMap.enabled = this.quality.tier === 'high';
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
     this.composer.addPass(this.renderPass);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.6, 0.8);
@@ -115,11 +119,21 @@ export class Engine {
     else if (this.quality.tier === 'medium') this.setTier('low');
   }
 
+  /** Dynamic resolution: scales the pixel ratio to hold frame rate on weaker GPUs. */
+  private dynScale = 1;
+  private dynAcc = 0;
+  private dynFrames = 0;
+
+  private get ratio() {
+    return Math.max(0.6, this.quality.pixelRatio * this.dynScale);
+  }
+
   private applySize() {
-    pointUniforms.uPixel.value = this.quality.pixelRatio;
+    pointUniforms.uPixel.value = this.ratio;
     pointUniforms.uHeight.value = this.height;
+    this.renderer.setPixelRatio(this.ratio);
     this.renderer.setSize(this.width, this.height);
-    this.composer.setPixelRatio(this.quality.pixelRatio);
+    this.composer.setPixelRatio(this.ratio);
     this.composer.setSize(this.width, this.height);
     const s = this.quality.bloomScale;
     this.bloom.resolution.set(this.width * s, this.height * s);
@@ -172,6 +186,21 @@ export class Engine {
     this.renderer.setAnimationLoop(null);
   }
 
+  private adaptResolution(dt: number) {
+    if (document.visibilityState !== 'visible') return;
+    this.dynAcc += dt;
+    this.dynFrames++;
+    if (this.dynAcc < 1.2) return;
+    const fps = this.dynFrames / this.dynAcc;
+    this.dynAcc = 0;
+    this.dynFrames = 0;
+    const prev = this.dynScale;
+    // target a steady 55–60 fps: shed pixels quickly, win them back slowly
+    if (fps < 52 && this.dynScale > 0.6) this.dynScale = Math.max(0.6, this.dynScale - (fps < 40 ? 0.15 : 0.08));
+    else if (fps > 58.5 && this.dynScale < 1) this.dynScale = Math.min(1, this.dynScale + 0.04);
+    if (prev !== this.dynScale) this.applySize();
+  }
+
   /** Render one frame now (used by the dev test pump). */
   tick() {
     this.frame();
@@ -192,6 +221,7 @@ export class Engine {
     const f = this.grade.uniforms.uFlash;
     f.value = Math.max(0, f.value - dt * 1.4);
     this.composer.render(dt);
+    this.adaptResolution(dt);
     if (document.visibilityState === 'visible') this.fps.sample(dt);
   }
 }

@@ -25,7 +25,7 @@ export interface Project {
   name: string;
   /** Short subtitle shown on the summoned artefact. */
   tagline: string;
-  /** Which magical object represents the project in the corridor. */
+  /** Which magical object represents the project in the Great Hall. */
   artefact: 'tome' | 'orrery' | 'orb';
   /** Accent colour of the artefact (hex). */
   color: string;
@@ -38,11 +38,22 @@ export interface Project {
   links: LinkItem[];
 }
 
+const NAME = 'Hriday Chatrath';
+const ROLE = 'Student developer'; // CONFIRM
+
+export interface Caption {
+  /** 0..1 — how far across the lake the caption appears. */
+  at: number;
+  eyebrow?: string;
+  title: string;
+  sub?: string;
+}
+
 export const portfolio = {
   /* ── Identity ──────────────────────────────────────────────────────────── */
-  name: 'Hriday Chatrath',
+  name: NAME,
   /** Shown under the name on the ticket. PLACEHOLDER: e.g. "Student · Developer". */
-  role: 'Student developer', // CONFIRM
+  role: ROLE,
   /** Used in <title> and share previews. */
   siteTitle: 'Hriday Chatrath — The Journey',
 
@@ -54,6 +65,19 @@ export const portfolio = {
     departs: '11:00',
     class: 'First Year',
   },
+
+  /* ── Boat ride captions (Scene 2) ─────────────────────────────────────── */
+  // DRAFT — edit freely. They fade in one after another as the boat crosses the lake.
+  lakeCaptions: [
+    { at: 0.03, eyebrow: 'The Black Lake', title: 'No oars tonight.', sub: 'The boats know the way.' },
+    { at: 0.2, eyebrow: 'Your guide this evening', title: NAME, sub: ROLE },
+    { at: 0.38, title: 'I build software that has to work in the real world', sub: 'Phones in a lecture hall. A building site. Light from the open ocean.' },
+    { at: 0.58, eyebrow: 'Waiting in the castle', title: 'Four spells. Three projects. One letter.' },
+    { at: 0.8, title: 'Keep your heads down —', sub: 'we are going under the cliff.' },
+  ] as Caption[],
+
+  /* ── Great Hall arrival ───────────────────────────────────────────────── */
+  hallTitle: { eyebrow: 'Hogwarts', title: 'The Great Hall', sub: 'Cast the spells in order — or open the spellbook to jump ahead.' },
 
   /* ── LUMOS · About me ─────────────────────────────────────────────────── */
   about: {

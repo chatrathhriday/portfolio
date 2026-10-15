@@ -5,7 +5,32 @@
  */
 import { settings } from './settings';
 
-type Ambience = 'station' | 'lake' | 'corridor' | 'chamber' | 'none';
+type Ambience = 'station' | 'lake' | 'hall' | 'none';
+
+/** Seconds per bar (~64 bpm in 4/4). */
+const BAR = 3.75;
+const midi = (n: number) => 440 * Math.pow(2, (n - 69) / 12);
+/** Original modal progression in D minor: i – VI – III – VII – iv – VI – sus – V. Root first. */
+const PROGRESSION: number[][] = [
+  [50, 62, 65, 69], // Dm
+  [46, 62, 65, 70], // Bb
+  [53, 60, 65, 69], // F
+  [48, 60, 64, 67], // C
+  [43, 62, 67, 70], // Gm
+  [46, 62, 65, 70], // Bb
+  [45, 62, 64, 69], // Asus4
+  [45, 61, 64, 69], // A
+];
+function seeded(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -52,6 +77,12 @@ class AudioEngine {
     this.noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.musicBus = ctx.createGain();
+    this.musicBus.gain.value = 0.5;
+    this.musicBus.connect(this.master);
+    const send = ctx.createGain();
+    send.gain.value = 0.7;
+    this.musicBus.connect(send).connect(this.reverb);
     this.applyMute();
     if (this.current !== 'none') {
       const a = this.current;
@@ -64,6 +95,123 @@ class AudioEngine {
     if (!this.ctx) return;
     const on = settings.get().sound;
     this.master.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.25);
+    if (on) this.startMusic();
+    else this.stopMusic();
+  }
+
+  /* ── Original procedural score ─────────────────────────────────────────
+     Slow string chords under a celesta-like bell line. The progression and
+     melody are generated here (seeded, evolving each cycle) — not a cover of
+     any existing theme. */
+
+  private musicBus!: GainNode;
+  private musicTimer = 0;
+  private musicNext = 0;
+  private musicBar = 0;
+  private mood = { density: 0.3, brightness: 0.6 };
+
+  /** Scene mood: how busy and bright the score is. */
+  setMood(kind: 'station' | 'lake' | 'hall') {
+    this.mood = kind === 'station' ? { density: 0.22, brightness: 0.5 } : kind === 'lake' ? { density: 0.32, brightness: 0.6 } : { density: 0.42, brightness: 0.8 };
+  }
+
+  private startMusic() {
+    if (!this.ctx || this.musicTimer) return;
+    this.musicNext = this.ctx.currentTime + 0.3;
+    this.musicTimer = window.setInterval(() => this.scheduleMusic(), 120);
+  }
+
+  private stopMusic() {
+    clearInterval(this.musicTimer);
+    this.musicTimer = 0;
+  }
+
+  private scheduleMusic() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    while (this.musicNext < ctx.currentTime + 0.8) {
+      this.playBar(this.musicBar, this.musicNext);
+      this.musicNext += BAR;
+      this.musicBar++;
+    }
+  }
+
+  private playBar(bar: number, t: number) {
+    const chord = PROGRESSION[bar % PROGRESSION.length];
+    const cycle = Math.floor(bar / PROGRESSION.length);
+    // strings: root in the bass, the rest voiced close in the middle register
+    this.stringNote(midi(chord[0] - 12), t, BAR * 1.05, 0.05);
+    for (const n of chord.slice(1)) this.stringNote(midi(n), t, BAR * 1.05, 0.03);
+    if (this.mood.brightness > 0.7) this.stringNote(midi(chord[1] + 12), t + BAR * 0.25, BAR * 0.8, 0.012);
+    // celesta: 8 eighth-note slots, stepwise motion over a chord-tone scale
+    const rnd = seeded(bar * 7919 + cycle * 104729);
+    const scale = [...chord.slice(1), ...chord.slice(1).map((n) => n + 12)].sort((a, b) => a - b);
+    let idx = Math.floor(rnd() * scale.length);
+    for (let i = 0; i < 8; i++) {
+      const strong = i === 0 || i === 4;
+      if (rnd() > this.mood.density + (strong ? 0.25 : 0)) continue;
+      idx = Math.max(0, Math.min(scale.length - 1, idx + Math.round((rnd() - 0.5) * 3)));
+      const note = scale[idx] + 12;
+      this.celesta(midi(note), t + i * (BAR / 8) + (rnd() - 0.5) * 0.02, strong ? 0.07 : 0.05);
+    }
+  }
+
+  private stringNote(f: number, t: number, len: number, vol: number) {
+    const ctx = this.ctx!;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 1.4);
+    g.gain.setValueAtTime(vol, t + len - 1.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.6);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 700 + this.mood.brightness * 900;
+    lp.Q.value = 0.4;
+    lp.connect(g).connect(this.musicBus);
+    for (const det of [-6, 5]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      o.detune.value = det;
+      const vib = ctx.createOscillator();
+      vib.frequency.value = 4.6 + Math.random();
+      const vg = ctx.createGain();
+      vg.gain.value = 3;
+      vib.connect(vg).connect(o.detune);
+      o.connect(lp);
+      o.start(t);
+      vib.start(t);
+      o.stop(t + len + 0.8);
+      vib.stop(t + len + 0.8);
+    }
+  }
+
+  /** Bell-like FM tone in the spirit of a celesta. */
+  private celesta(f: number, t: number, vol: number) {
+    const ctx = this.ctx!;
+    const car = ctx.createOscillator();
+    car.frequency.value = f;
+    const mod = ctx.createOscillator();
+    mod.frequency.value = f * 3.5;
+    const idx = ctx.createGain();
+    idx.gain.setValueAtTime(f * 1.6, t);
+    idx.gain.exponentialRampToValueAtTime(f * 0.05, t + 0.5);
+    mod.connect(idx).connect(car.frequency);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+    const oct = ctx.createOscillator();
+    oct.frequency.value = f * 2;
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(vol * 0.25, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    car.connect(g).connect(this.musicBus);
+    oct.connect(og).connect(this.musicBus);
+    for (const o of [car, mod, oct]) {
+      o.start(t);
+      o.stop(t + 2.3);
+    }
   }
 
   private impulse(seconds: number, decay: number) {
@@ -94,6 +242,7 @@ class AudioEngine {
   ambience(kind: Ambience) {
     if (kind === this.current) return;
     this.current = kind;
+    if (kind !== 'none') this.setMood(kind);
     if (!this.ctx) return;
     const ctx = this.ctx;
     if (this.ambNodes) {
@@ -168,14 +317,11 @@ class AudioEngine {
         bed(240, 0.5, 0.1, 0.04); // wind over open water
         drone([110, 164.8, 220], 0.012);
         break;
-      case 'corridor':
-        bed(300, 0.7, 0.07, 0.03); // air moving through stone
-        drone([73.4, 110, 146.8], 0.016);
-        crackle(4, 2500, 0.05); // torches
-        break;
-      case 'chamber':
-        bed(420, 0.6, 0.06, 0.03);
-        drone([98, 146.8, 196, 293.7], 0.014);
+      case 'hall':
+        bed(300, 0.7, 0.07, 0.03); // air moving through a vast stone room
+        bed(900, 0.4, 0.025, 0.02);
+        drone([73.4, 110, 146.8, 220], 0.013);
+        crackle(5, 2500, 0.045); // torches and candles
         break;
     }
     this.ambNodes = {
@@ -335,6 +481,24 @@ class AudioEngine {
     this.tone(70, t + 0.95, 2.5, 'sine', 0.35, 38);
     this.whoosh(t + 0.95, 2.4, 6000, 300, 0.3, 0.4);
     [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, t + 1 + i * 0.05, 3, 'sine', 0.04, undefined, 0.05));
+  }
+
+  /** Lumos Maxima: a long rising swell that breaks into a bright, ringing chord. */
+  maxima() {
+    if (!this.ready()) return;
+    const t = this.ctx!.currentTime;
+    this.whoosh(t, 1.6, 200, 5000, 0.22, 0.9);
+    [130.8, 196, 261.6].forEach((f) => this.tone(f, t, 1.6, 'sine', 0.05, f * 2, 1.2));
+    this.tone(65, t + 1.5, 3, 'sine', 0.3, 40);
+    this.whoosh(t + 1.5, 3, 7000, 400, 0.25, 0.4);
+    [523.3, 659.3, 784, 1046.5, 1318.5, 1568].forEach((f, i) => this.tone(f, t + 1.55 + i * 0.06, 4, 'sine', 0.045, undefined, 0.04));
+  }
+
+  /** Paper flutter for the descending letter. */
+  flutter() {
+    if (!this.ready()) return;
+    const t = this.ctx!.currentTime;
+    for (let i = 0; i < 6; i++) this.whoosh(t + i * 0.28, 0.2, 2500, 900, 0.06, 1.2);
   }
 
   door() {

@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import type { Engine } from './Engine';
 import type { Director } from './Director';
 
-export type SceneId = 'station' | 'lake' | 'corridor' | 'chamber';
+export type SceneId = 'station' | 'lake' | 'hall';
 
 /** Every place the spellbook can jump to. */
 export type Section = 'station' | 'lake' | 'about' | 'projects' | 'aspirations' | 'contact';
@@ -35,7 +35,7 @@ export interface WorldScene {
   skip(): void;
   /** Whether a skippable cinematic is running right now. */
   readonly cinematic: boolean;
-  /** Jump within the scene (corridor/chamber). */
+  /** Jump within the scene (Great Hall sections). */
   goToSection?(section: Section): void;
   /** Escape key / back gesture. Return true if handled. */
   back?(): boolean;

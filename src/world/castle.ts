@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { castleWindows, stoneBlocks } from '../core/textures';
 import { mulberry32 } from '../core/noise';
+import { pbrMaterial, type PbrMaps } from '../core/assets';
 
 export interface Castle {
   group: THREE.Group;
@@ -16,13 +17,19 @@ export interface Castle {
   windowMats: THREE.MeshStandardMaterial[];
 }
 
-export function buildCastle(): Castle {
+export interface CastleTextures {
+  wall: PbrMaps;
+  roof: PbrMaps;
+  rock: PbrMaps;
+}
+
+export function buildCastle(tex?: CastleTextures): Castle {
   const group = new THREE.Group();
   const rnd = mulberry32(42);
   const stone = stoneBlocks('castle', { rows: 8, cols: 4, tint: [70, 72, 82], seed: 31, size: 256 });
   const winTex = castleWindows(5, 0.55);
   const winTex2 = castleWindows(9, 0.38);
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0x141a26, roughness: 0.6, metalness: 0.2 });
+  const roofMat = tex ? pbrMaterial(tex.roof, [3, 3], { color: 0x56607a }) : new THREE.MeshStandardMaterial({ color: 0x141a26, roughness: 0.6, metalness: 0.2 });
   const windowMats: THREE.MeshStandardMaterial[] = [];
 
   const wallMat = (w: number, h: number, dense = true) => {
@@ -31,20 +38,15 @@ export function buildCastle(): Castle {
     const em = (dense ? winTex : winTex2).clone();
     em.repeat.set(Math.max(1, Math.round(w / 22)), Math.max(1, Math.round(h / 22)));
     em.offset.set(rnd(), rnd());
-    const m = new THREE.MeshStandardMaterial({
-      map,
-      color: 0x8a90a0,
-      roughness: 0.92,
-      emissive: 0xffb060,
-      emissiveMap: em,
-      emissiveIntensity: 2.4,
-    });
+    const m = tex
+      ? pbrMaterial(tex.wall, [w / 7, h / 7], { color: 0x8c92a2, emissive: 0xffb060, emissiveMap: em, emissiveIntensity: 2.4 })
+      : new THREE.MeshStandardMaterial({ map, color: 0x8a90a0, roughness: 0.92, emissive: 0xffb060, emissiveMap: em, emissiveIntensity: 2.4 });
     windowMats.push(m);
     return m;
   };
 
   /* ── Cliff ── */
-  const rock = new THREE.MeshStandardMaterial({ color: 0x1a1e26, roughness: 1, flatShading: true });
+  const rock = tex ? pbrMaterial(tex.rock, [4, 3], { color: 0x5a606c }) : new THREE.MeshStandardMaterial({ color: 0x1a1e26, roughness: 1, flatShading: true });
   const cliffGeo = new THREE.IcosahedronGeometry(1, 3);
   const pos = cliffGeo.attributes.position;
   const v = new THREE.Vector3();
@@ -74,6 +76,7 @@ export function buildCastle(): Castle {
   }
 
   const base = 40; // height of the cliff top where buildings stand
+  const merlonMats: THREE.Matrix4[] = [];
 
   /* ── Towers ── */
   const tower = (x: number, z: number, r: number, h: number, roofH: number, y = base) => {
@@ -82,6 +85,13 @@ export function buildCastle(): Castle {
     const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.08, h, 10), wallMat(r * 6.3, h, h > 30));
     body.position.y = h / 2;
     t.add(body);
+    // crenellated parapet on the larger towers
+    if (r >= 4) {
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        merlonMats.push(new THREE.Matrix4().makeTranslation(x + Math.cos(a) * r * 1.13, y + h + 0.9, z + Math.sin(a) * r * 1.13));
+      }
+    }
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.15, r * 1.15, 1.2, 10), roofMat);
     ring.position.y = h;
     t.add(ring);
@@ -149,6 +159,10 @@ export function buildCastle(): Castle {
   bridge.rotation.y = -0.15;
   group.add(bridge);
   tower(108, 16, 4, 34, 13, base - 18);
+
+  const merlons = new THREE.InstancedMesh(new THREE.BoxGeometry(1.1, 1.4, 1.1), roofMat, merlonMats.length);
+  merlonMats.forEach((m, i) => merlons.setMatrixAt(i, m));
+  group.add(merlons);
 
   // Boathouse arch at the waterline (where the boats go in)
   const archShape = new THREE.Shape();
