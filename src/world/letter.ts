@@ -98,10 +98,11 @@ function letterSheet() {
   g.fillText(portfolio.contact.heading, W / 2, 340);
   g.font = 'italic 58px "Cormorant Garamond", Georgia, serif';
   g.fillStyle = '#4a2a14';
-  g.fillText(portfolio.contact.email, W / 2, 500);
+  g.fillText(portfolio.contact.email, W / 2, 490);
+  if (portfolio.contact.phone) g.fillText(portfolio.contact.phone, W / 2, 570);
   g.font = '600 54px "Cormorant Garamond", Georgia, serif';
   g.fillStyle = INK;
-  let y = 640;
+  let y = 700;
   for (const l of portfolio.contact.links.filter((x) => x.url)) {
     g.fillText('✦  ' + l.label, W / 2, y);
     y += 84;

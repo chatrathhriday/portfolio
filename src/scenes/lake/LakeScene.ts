@@ -23,7 +23,7 @@ import type { CastleTextures } from '../../world/castle';
 import { portfolio } from '../../content/portfolio';
 
 const CASTLE_Z = -340;
-const RIDE_SECONDS = 30;
+const RIDE_SECONDS = 22;
 /** Hull rim sits at the boat origin with the hull below it; lift so ~1/3 of the hull is under water. */
 const FLOAT_Y = 0.36;
 /** Rotates the photographic sky so its moon sits beside the castle. */

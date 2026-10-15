@@ -39,7 +39,7 @@ export interface Project {
 }
 
 const NAME = 'Hriday Chatrath';
-const ROLE = 'Student developer'; // CONFIRM
+const ROLE = 'Student developer';
 
 export interface Caption {
   /** 0..1 — how far across the lake the caption appears. */
@@ -52,7 +52,7 @@ export interface Caption {
 export const portfolio = {
   /* ── Identity ──────────────────────────────────────────────────────────── */
   name: NAME,
-  /** Shown under the name on the ticket. PLACEHOLDER: e.g. "Student · Developer". */
+  /** Shown under the name on the ticket. */
   role: ROLE,
   /** Used in <title> and share previews. */
   siteTitle: 'Hriday Chatrath — The Journey',
@@ -78,13 +78,13 @@ export const portfolio = {
   },
 
   /* ── Boat ride captions (Scene 2) ─────────────────────────────────────── */
-  // DRAFT — edit freely. They fade in one after another as the boat crosses the lake.
+  // Edit freely. They fade in one after another as the boat crosses the lake.
   lakeCaptions: [
-    { at: 0.03, eyebrow: 'The Black Lake', title: 'No oars tonight.', sub: 'The boats know the way.' },
-    { at: 0.2, eyebrow: 'Your guide this evening', title: NAME, sub: ROLE },
-    { at: 0.38, title: 'I build software that has to work in the real world', sub: 'Phones in a lecture hall. A building site. Light from the open ocean.' },
-    { at: 0.58, eyebrow: 'Waiting in the castle', title: 'Four spells. Three projects. One letter.' },
-    { at: 0.8, title: 'Keep your heads down —', sub: 'we are going under the cliff.' },
+    { at: 0.03, eyebrow: 'The Black Lake', title: 'Every journey starts on the water.', sub: 'Sit back — the boats know the way.' },
+    { at: 0.2, eyebrow: 'Rowing with you tonight', title: NAME, sub: 'B.Tech fresher at VIT · ' + ROLE },
+    { at: 0.38, eyebrow: 'A little about the traveller', title: 'A curious mind with a hunger to learn', sub: 'Books, cricket, football — and building things that solve real problems.' },
+    { at: 0.56, eyebrow: 'Waiting inside the castle', title: 'Four spells. Three projects. One letter.', sub: 'Light the hall, summon the work, call the Patronus, open the last letter.' },
+    { at: 0.78, eyebrow: 'Almost there', title: 'Heads down, first-years —', sub: 'we are going under the cliff.' },
   ] as Caption[],
 
   /* ── Great Hall arrival ───────────────────────────────────────────────── */
@@ -93,25 +93,22 @@ export const portfolio = {
   /* ── LUMOS · About me ─────────────────────────────────────────────────── */
   about: {
     heading: 'The one who lit the lamp',
-    // DRAFT — based on your projects; rewrite in your own words.
     intro:
-      'I build software that has to survive contact with the real world — phones in a lecture hall, a construction site in Gurugram, satellite spectra from the open ocean.',
+      'I have a curious mind and a hunger to learn. I love reading books, playing sports and exploring new things — and building software that solves real problems.',
     education: [
-      // CONFIRM — VIT is inferred from ProxyProof's @vitstudent.ac.in sign-in. Add degree, branch and year.
-      { title: 'Vellore Institute of Technology (VIT)', detail: 'PLACEHOLDER: degree · branch · year of study' },
+      { title: 'Vellore Institute of Technology (VIT)', detail: 'B.Tech, Engineering · Fresher' },
     ],
-    // DRAFT — taken from the work in your three projects.
     interests: [
+      'Building new things from scratch',
       'Security that holds up in hardware (Android Keystore, signed requests)',
       '3D and geospatial visualisation',
       'Environmental and climate data',
       'Applied machine learning with honest uncertainty',
     ],
-    // DRAFT — reflects patterns visible in your READMEs (threat models, "numbers are honest").
     approach:
-      'Start from the person who has to use it, write down how it could fail, then make the system say "I don\'t know" instead of guessing. Every number on screen should trace back to a source.',
-    // PLACEHOLDER — interests beyond academics. Leave the array empty to hide this line.
-    beyond: [] as string[],
+      'I love new problems — every one teaches me something more. I like to think a problem through properly first, and only then start solving it.',
+    // Leave the array empty to hide this line.
+    beyond: ['Listening to music', 'Reading books', 'Playing cricket and football', 'Binge-watching a good show'] as string[],
   },
 
   /* ── ACCIO · Projects ─────────────────────────────────────────────────── */
@@ -125,8 +122,7 @@ export const portfolio = {
       problem:
         'Proxy attendance: a classmate answers the roll call, scans a QR code or types a PIN for someone who is not in the room. Teachers lose minutes every class checking it by hand.',
       contribution:
-        // CONFIRM — wording about your role.
-        'Designed and built the full system: Flutter Android app with native Kotlin key handling, Node.js backend, live React dashboard, threat model and deployment.',
+        'Built it myself, end to end: the Flutter Android app with native Kotlin key handling, the Node.js backend, the live React dashboard, the threat model and the deployment.',
       tech: ['Flutter', 'Kotlin · Android Keystore', 'Node.js · Express', 'PostgreSQL (Neon) · PGlite', 'Socket.IO', 'React · Vite', 'Render'],
       features: [
         'Teacher phone broadcasts an iBeacon whose token is an HMAC that rotates every 10 s — the secret never leaves the server',
@@ -141,7 +137,7 @@ export const portfolio = {
         { label: 'Live dashboard', url: 'https://proxyproof.onrender.com', kind: 'live' },
         { label: 'Source on GitHub', url: 'https://github.com/chatrathhriday/ProxyProof', kind: 'repo' },
         { label: 'Download APK', url: 'https://github.com/chatrathhriday/ProxyProof/releases/latest/download/ProxyProof.apk', kind: 'download' },
-        { label: 'Demo video', url: '', kind: 'video' }, // PLACEHOLDER
+        { label: 'Demo video', url: '', kind: 'video' }, // add a link when you have one
       ],
     },
     {
@@ -153,8 +149,7 @@ export const portfolio = {
       problem:
         'Construction sites create dust, heat stress and embodied carbon long before a building is occupied, yet developers rarely see those impacts — or what mitigation would change — before they break ground.',
       contribution:
-        // CONFIRM — wording about your role.
-        'Built the 3D site viewer, the screening-level dust / heat / greenhouse-gas models, the live-data layer, the mitigation scenario engine and the report export.',
+        'Worked on the backend: the server that fetches and caches the live environmental data feeds and generates the assessment report.',
       tech: ['TypeScript', 'React · Vite', 'CesiumJS', 'Google Photorealistic 3D Tiles', 'Web Workers', 'Zustand', 'Hono', 'Playwright (PDF)', 'Gemini / Groq'],
       features: [
         'Your building as a 3D model at its real location on photorealistic 3D tiles',
@@ -166,8 +161,8 @@ export const portfolio = {
       ],
       note: 'Screening-level (Tier 1–2) models, labelled as indicative — not regulatory dispersion modelling.',
       links: [
-        { label: 'Source on GitHub', url: '', kind: 'repo' }, // PLACEHOLDER — no public repo found yet
-        { label: 'Live demo', url: '', kind: 'live' }, // PLACEHOLDER
+        { label: 'Source on GitHub', url: '', kind: 'repo' }, // no public repo yet — add the URL when there is one
+        { label: 'Live demo', url: '', kind: 'live' },
       ],
     },
     {
@@ -179,8 +174,7 @@ export const portfolio = {
       problem:
         'NASA\'s PACE satellite sees the ocean in 172 colours. Spotting spectra that are genuinely abnormal — and saying what likely caused them, or admitting it cannot tell — is hard to do honestly.',
       contribution:
-        // CONFIRM — wording about your role.
-        'Built the ML service (feature pipeline, detector ensemble, cause classifier, out-of-distribution gate) and the 3D web front end.',
+        'Built it myself: the ML service (feature pipeline, detector ensemble, cause classifier, out-of-distribution gate) and the 3D web front end.',
       tech: ['Python', 'scikit-learn', 'FastAPI', 'xarray · netCDF', 'earthaccess', 'PyTorch (experimental CNN)', 'Next.js', 'React Three Fiber'],
       features: [
         'Spectral pipeline: quality flags, denoising, SNV, derivatives, continuum removal, 24-component PCA manifold',
@@ -191,8 +185,8 @@ export const portfolio = {
       ],
       note: 'The included model is trained on synthetic PACE-shaped data; its metrics are engineering benchmarks, not field accuracy.',
       links: [
-        { label: 'Source on GitHub', url: '', kind: 'repo' }, // PLACEHOLDER
-        { label: 'Live demo', url: '', kind: 'live' }, // PLACEHOLDER
+        { label: 'Source on GitHub', url: 'https://github.com/chatrathhriday/OceanNova', kind: 'repo' },
+        { label: 'Live demo', url: '', kind: 'live' },
       ],
     },
   ] as Project[],
@@ -200,33 +194,28 @@ export const portfolio = {
   /* ── EXPECTO PATRONUM · Aspirations ───────────────────────────────────── */
   aspirations: {
     heading: 'What the light is walking toward',
-    // PLACEHOLDER/DRAFT — every line below is a starting point drawn from your
-    // projects. Replace with your real goals.
     engineer:
-      'PLACEHOLDER: the kind of engineer you want to become — e.g. one who ships systems people can trust because their limits are written down.',
-    explore: [
-      'PLACEHOLDER: technologies you want to learn next',
-      'e.g. on-device ML, geospatial engines, secure hardware',
-    ],
-    problems: [
-      'PLACEHOLDER: problems you want to solve',
-      'e.g. climate and environmental decision tools that people actually use',
-    ],
-    longTerm: 'PLACEHOLDER: your longer-term ambition, in one or two sentences.',
+      'An engineer who keeps solving new problems and turns the answers into products people actually use.',
+    explore: ['Data science', 'AI and machine learning', 'Building and shipping new products'],
+    problems: ['Real-world problems that affect everyday people', 'Problems where data and AI can help people make better decisions'],
+    longTerm: 'To build a startup of my own — and to do an MBA at an Ivy League school along the way.',
   },
 
-  /* ── ALOHOMORA · Contact ──────────────────────────────────────────────── */
+  /* ── LUMOS MAXIMA · Contact ───────────────────────────────────────────── */
   contact: {
     heading: 'Send an owl',
-    blurb: 'Internships, collaborations, or just a good problem — the door is open.', // DRAFT
-    email: 'chatrathhriday45@gmail.com', // CONFIRM this is the address you want public
+    blurb: 'Internships, collaborations, a startup idea or just a good problem — the door is open.',
+    email: 'chatrathhriday45@gmail.com',
+    /** Shown as a tap-to-call link. Leave '' to hide it. */
+    phone: '+91 88009 69860',
     links: [
       { label: 'GitHub', url: 'https://github.com/chatrathhriday' },
-      { label: 'LinkedIn', url: '' }, // PLACEHOLDER — paste your LinkedIn URL
-      { label: 'Résumé', url: '' }, // PLACEHOLDER — put resume.pdf in /public and use './resume.pdf'
+      { label: 'LinkedIn', url: '' }, // paste your LinkedIn URL to show it
+      { label: 'Résumé', url: '' }, // put resume.pdf in /public and use './resume.pdf'
     ] as LinkItem[],
-    /** The closing line of the whole journey. DRAFT — make it yours. */
-    farewell: 'The castle lights stay on for whoever finds the door. Thank you for walking all the way here.',
+    /** The closing line of the whole journey. */
+    farewell:
+      'Every castle began as a stubborn idea and a long walk in the dark. Mine is still being built — and the lanterns are lit for whoever wants to build it with me.',
     signature: '— H.C.',
   },
 };

@@ -74,6 +74,7 @@ export function contactBody(onRestart?: () => void) {
       <a class="magic-link primary" href="mailto:${esc(c.email)}">${icons.mail}<span>${esc(c.email)}</span></a>
       <button type="button" class="copy-btn" aria-label="Copy email address">${icons.copy}<span>Copy</span></button>
     </div>
+    ${c.phone ? `<div class="owl-post"><a class="magic-link" href="tel:${esc(c.phone.replace(/[^+\d]/g, ''))}">${icons.phone}<span>${esc(c.phone)}</span></a></div>` : ''}
     <div class="links">${linkButtons(c.links)}</div>
     <blockquote class="farewell"><p>${txt(c.farewell)}</p><footer>${esc(c.signature)}</footer></blockquote>
     ${onRestart ? `<button type="button" class="go ghost restart">Begin the journey again</button>` : ''}
