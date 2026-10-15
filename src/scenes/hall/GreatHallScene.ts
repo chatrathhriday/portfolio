@@ -977,7 +977,7 @@ class GreatHallScene extends BaseScene {
     tl.to(this.wand.light, { intensity: 1, duration: 1.5 }, releaseAt + 0.4);
     // a sealed letter drifts down out of the stars
     const L = this.letter.group;
-    const restPos = portrait() ? new THREE.Vector3(0, 2.75, -7.2) : new THREE.Vector3(0, 2.2, -7);
+    const restPos = portrait() ? new THREE.Vector3(0, 3.1, -8.6) : new THREE.Vector3(0, 2.15, -7.6);
     const fall = { t: 0 };
     const fallStart = releaseAt + (reduced ? 0.4 : 1.6);
     const fallDur = reduced ? 1.2 : 4.6;
@@ -1005,7 +1005,7 @@ class GreatHallScene extends BaseScene {
     tl.to(L.rotation, { x: 0, y: Math.PI, z: 0, duration: 1.1, ease: 'power2.inOut' }, fallStart + fallDur);
     tl.call(() => audio.page(), [], fallStart + fallDur + 0.9);
     const op = { v: 0 };
-    tl.to(op, { v: 1, duration: reduced ? 0.6 : 1.8, ease: 'power2.inOut', onUpdate: () => this.letter.setOpen(op.v) }, fallStart + fallDur + 1);
+    tl.to(op, { v: 1, duration: reduced ? 0.6 : 2.8, ease: 'sine.inOut', onUpdate: () => this.letter.setOpen(op.v) }, fallStart + fallDur + 1);
     tl.call(() => {
       for (let i = 0; i < 40; i++) this.sparks.emit({ position: L.position, spread: 1.1, life: [0.6, 1.4], size: [0.05, 0.01], color: 0xffd890, drag: 1.5, gravity: -0.3 });
     }, [], fallStart + fallDur + 1.1);
@@ -1021,7 +1021,7 @@ class GreatHallScene extends BaseScene {
     L.visible = true;
     this.letter.setOpen(1);
     L.rotation.set(0, Math.PI, 0);
-    const p = portrait() ? new THREE.Vector3(0, 2.9, -8.2) : new THREE.Vector3(-1.25, 2.0, -7.9);
+    const p = portrait() ? new THREE.Vector3(0, 3.35, -9.4) : new THREE.Vector3(-1.35, 1.95, -8.1);
     this.track(gsap.to(L.position, { x: p.x, y: p.y, z: p.z, duration: dur(1.2, 0.3), ease: 'power3.inOut' }));
     this.rig.look.set(p.x * 0.5, p.y + 0.3, -16);
     ui.openPanel({

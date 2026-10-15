@@ -4,7 +4,7 @@
 - **Vite + TypeScript**, no UI framework. The DOM UI is small, so plain modules are lighter than React.
 - **Three.js** (vanilla) for every scene, plus `EffectComposer` → `UnrealBloomPass` → grade pass (vignette, grain) → `OutputPass` (ACES tone mapping).
 - **GSAP** for camera and cinematic timelines.
-- **CC0 Poly Haven assets** (textures, HDRIs, sky, props) load per scene via `core/assets.ts`; every loader falls back to a procedural version, so nothing can break the journey. Sound is synthesised with Web Audio.
+- **Anime / painted style:** `core/toon.ts` patches three's standard shader once so all lit surfaces get soft cel bands and crisp highlights. `core/outline.ts` draws depth-based ink lines. Surfaces use painted canvas textures (`core/painted.ts`) and skies are painted in a shader. No film grain, photo textures or HDRIs.
 - **Camera:** `fx/cameraRig.ts`: cinematics move a target, and the camera follows on critically damped springs.
 
 ## Journey (scene sequence)

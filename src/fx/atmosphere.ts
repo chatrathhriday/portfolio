@@ -37,20 +37,31 @@ export function makeSky(o: SkyOptions) {
       void main(){
         vec3 d = normalize(vDir);
         float h = clamp(d.y, -0.2, 1.0);
-        vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.05, 0.75, h), 0.7));
-        // stars: hashed cells on the sphere, fading near the horizon
-        vec3 sd = d * 220.0; vec3 cell = floor(sd); vec3 f = fract(sd) - 0.5;
+        // painted three-stop gradient with a soft violet band near the horizon
+        vec3 band = mix(uHorizon, vec3(0.32, 0.22, 0.42), 0.35);
+        vec3 col = mix(uHorizon, band, smoothstep(0.0, 0.12, h));
+        col = mix(col, uTop, smoothstep(0.1, 0.8, h));
+        // stars: fewer, rounder and crisper, with a slow, gentle twinkle (no shimmer)
+        vec3 sd = d * 120.0; vec3 cell = floor(sd); vec3 f = fract(sd) - 0.5;
         float r = hash13(cell);
-        float star = step(1.0 - 0.012 * uStars, r) * smoothstep(0.08, 0.0, length(f)) * smoothstep(0.02, 0.3, h);
-        star *= 0.6 + 0.4 * sin(uTime * (1.0 + r * 4.0) + r * 50.0);
-        col += vec3(0.85, 0.9, 1.0) * star * 1.6;
-        // moon disc + halo
+        vec3 jitter = vec3(hash13(cell + 1.7), hash13(cell + 3.1), hash13(cell + 5.3)) - 0.5;
+        float sdist = length(f - jitter * 0.6);
+        float big = step(0.995, r);
+        float star = step(1.0 - 0.02 * uStars, r) * (smoothstep(0.09 + big * 0.06, 0.0, sdist)) * smoothstep(0.03, 0.35, h);
+        star *= 0.75 + 0.25 * sin(uTime * (0.4 + r * 0.8) + r * 40.0);
+        col += mix(vec3(0.85, 0.9, 1.0), vec3(1.0, 0.92, 0.75), hash13(cell + 9.0)) * star * 1.4;
+        // moon: clean disc, soft halo rings
         float m = max(dot(d, uMoonDir), 0.0);
-        col += uMoonColor * (smoothstep(0.9993, 0.9996, m) * 2.2 + pow(m, 200.0) * 0.25 + pow(m, 12.0) * 0.035);
-        // thin moving clouds, lit by the moon
-        vec2 cuv = d.xz / max(0.12, d.y + 0.1) * 0.8 + vec2(uTime * 0.004, 0.0);
-        float c = smoothstep(0.5, 0.85, fbm(cuv * 1.3)) * uClouds * smoothstep(0.0, 0.25, h);
-        col = mix(col, uHorizon * 1.3 + uMoonColor * pow(m, 6.0) * 0.25, c * 0.7);
+        float disc = smoothstep(0.99935, 0.99955, m);
+        col = mix(col, uMoonColor * 1.6, disc);
+        col += uMoonColor * (pow(m, 400.0) * 0.5 + pow(m, 40.0) * 0.12 + pow(m, 6.0) * 0.05);
+        // soft painted clouds: two tones, gently drifting, lit on the moon side
+        vec2 cuv = d.xz / max(0.15, d.y + 0.15) * 0.6 + vec2(uTime * 0.003, 0.0);
+        float n = fbm(cuv * 1.1);
+        float cloud = smoothstep(0.52, 0.6, n) * uClouds * smoothstep(0.0, 0.2, h);
+        float lit = smoothstep(0.58, 0.7, n) * (0.35 + 0.65 * pow(m, 3.0));
+        vec3 cloudCol = mix(uHorizon * 1.4 + vec3(0.04, 0.03, 0.08), uMoonColor * 0.75, lit);
+        col = mix(col, cloudCol, cloud * 0.85);
         gl_FragColor = vec4(col, 1.0);
       }`,
   });

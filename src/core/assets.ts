@@ -7,7 +7,10 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { stoneBlocks } from './textures';
+import { PAINTED_SETS, painted } from './painted';
+
+/** The site's art direction: hand-painted anime style (no photo textures or HDRIs). */
+export const PAINTED_STYLE = true;
 
 const BASE = './assets/';
 const texLoader = new THREE.TextureLoader();
@@ -38,51 +41,32 @@ function loadTex(url: string, srgb: boolean): Promise<THREE.Texture | null> {
 
 export interface PbrMaps {
   map: THREE.Texture;
-  normalMap: THREE.Texture;
-  /** Packed AO (R) / roughness (G) / metalness (B). Missing in fallback. */
+  normalMap: THREE.Texture | null;
+  /** Packed AO / roughness / metalness — unused in the painted (anime) style. */
   arm: THREE.Texture | null;
 }
 
-/** A PBR texture set. `repeat` is applied to clones so sets can be shared. */
+/**
+ * Surface set for a former Poly Haven texture id. The site now uses a hand-painted
+ * anime style, so these are painted canvases (see core/painted.ts) — no download.
+ */
 export async function pbr(id: string): Promise<PbrMaps> {
-  const [map, normalMap, arm] = await Promise.all([
-    loadTex(`${BASE}tex/${id}/diff.webp`, true),
-    loadTex(`${BASE}tex/${id}/nor.webp`, false),
-    loadTex(`${BASE}tex/${id}/arm.webp`, false),
-  ]);
-  if (map && normalMap) return { map, normalMap, arm };
-  const f = stoneBlocks('fallback-' + id, { seed: id.length * 7 });
-  return { map: f.map, normalMap: f.normalMap, arm: null };
+  const opts = PAINTED_SETS[id] ?? { kind: 'blocks' as const, base: '#9a9088' };
+  return { map: painted(opts), normalMap: null, arm: null };
 }
 
-/** Build a MeshStandardMaterial from a PBR set with a given tiling. */
+/** Build a material from a surface set with a given tiling (cel-shaded later by toonify). */
 export function pbrMaterial(set: PbrMaps, repeat: [number, number], params: THREE.MeshStandardMaterialParameters = {}) {
-  const r = (t: THREE.Texture) => {
-    const c = t.clone();
-    c.repeat.set(repeat[0], repeat[1]);
-    c.needsUpdate = true;
-    return c;
-  };
-  const m = new THREE.MeshStandardMaterial({
-    map: r(set.map),
-    normalMap: r(set.normalMap),
-    roughness: 1,
-    metalness: 0,
-    ...params,
-  });
-  if (set.arm) {
-    const arm = r(set.arm);
-    m.aoMap = arm;
-    m.roughnessMap = arm;
-    m.aoMapIntensity = 1;
-  } else {
-    m.roughness = params.roughness ?? 0.85;
-  }
-  return m;
+  const map = set.map.clone();
+  map.repeat.set(repeat[0], repeat[1]);
+  map.needsUpdate = true;
+  const { normalScale: _n, roughness: _r, ...rest } = params;
+  return new THREE.MeshStandardMaterial({ map, roughness: 1, metalness: 0, ...rest });
 }
 
 /** Image-based lighting from an HDRI (prefiltered for PBR). */
 export async function environment(id: string, renderer: THREE.WebGLRenderer): Promise<THREE.Texture | null> {
+  if (PAINTED_STYLE) return null; // toon shading ignores image-based lighting
   try {
     const hdr = await rgbeLoader.loadAsync(`${BASE}hdri/${id}.hdr`);
     hdr.mapping = THREE.EquirectangularReflectionMapping;
@@ -99,6 +83,7 @@ export async function environment(id: string, renderer: THREE.WebGLRenderer): Pr
 
 /** Photographic equirectangular sky for scene.background. */
 export async function sky(id: string): Promise<THREE.Texture | null> {
+  if (PAINTED_STYLE) return null; // scenes fall back to the painted procedural sky
   const t = await loadTex(`${BASE}sky/${id}.webp`, true);
   if (t) {
     t.mapping = THREE.EquirectangularReflectionMapping;

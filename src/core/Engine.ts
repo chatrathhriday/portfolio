@@ -12,6 +12,7 @@ import type { WorldScene } from './types';
 import { FpsMonitor, detectTier, profileFor, type QualityProfile, type Tier } from './quality';
 import { settings } from './settings';
 import { pointUniforms } from '../fx/particles';
+import { InkOutlinePass } from './outline';
 
 /** Vignette, film grain and a gentle cool-shadow / warm-highlight grade. */
 const GradeShader = {
@@ -19,7 +20,7 @@ const GradeShader = {
     tDiffuse: { value: null },
     uTime: { value: 0 },
     uVignette: { value: 1.0 },
-    uGrain: { value: 0.035 },
+    uGrain: { value: 0.0 }, // anime style: no film grain
     uFlash: { value: 0 },
     uFlashColor: { value: new THREE.Color(1, 0.92, 0.75) },
   },
@@ -33,8 +34,9 @@ const GradeShader = {
       float l = dot(c.rgb, vec3(0.2126,0.7152,0.0722));
       // split tone: shadows toward midnight blue, highlights toward amber
       c.rgb += mix(vec3(-0.004, 0.0, 0.018), vec3(0.02, 0.008, -0.012), smoothstep(0.05, 0.6, l));
+      c.rgb = mix(vec3(l), c.rgb, 1.12); // a touch more saturation, like a painted frame
       vec2 d = vUv - 0.5;
-      c.rgb *= mix(1.0, smoothstep(0.85, 0.2, length(d * vec2(1.1, 1.0))), 0.55 * uVignette);
+      c.rgb *= mix(1.0, smoothstep(0.95, 0.25, length(d * vec2(1.1, 1.0))), 0.4 * uVignette);
       c.rgb += (h(vUv * 1000.0 + fract(uTime * 7.0)) - 0.5) * uGrain;
       c.rgb = mix(c.rgb, uFlashColor * 1.4, uFlash);
       gl_FragColor = c;
@@ -48,6 +50,7 @@ export class Engine {
   private composer: EffectComposer;
   private renderPass: RenderPass;
   private bloom: UnrealBloomPass;
+  private outline: InkOutlinePass;
   readonly grade: ShaderPass;
   private current: WorldScene | null = null;
   private clock = new THREE.Clock();
@@ -78,11 +81,16 @@ export class Engine {
 
     // MSAA on the composer's own targets — without it every edge in post-processing is jagged.
     const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: this.quality.tier === 'high' ? 4 : 2 });
+    // depth is kept so the ink-outline pass can find silhouettes and creases
+    rt.depthTexture = new THREE.DepthTexture(1, 1);
+    rt.depthTexture.type = THREE.UnsignedIntType;
     this.composer = new EffectComposer(this.renderer, rt);
     this.renderer.shadowMap.enabled = this.quality.tier === 'high';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
     this.composer.addPass(this.renderPass);
+    this.outline = new InkOutlinePass();
+    this.composer.addPass(this.outline);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.6, 0.8);
     this.composer.addPass(this.bloom);
     this.grade = new ShaderPass(GradeShader);
@@ -213,9 +221,13 @@ export class Engine {
     if (!ws) return;
     ws.update(dt, this.elapsed);
     this.bloom.enabled = this.quality.bloom;
-    this.bloom.strength = ws.bloom.strength;
-    this.bloom.radius = ws.bloom.radius;
+    // soft, wide "anime glow" around lights rather than tight hot spots
+    this.bloom.strength = ws.bloom.strength * 0.85;
+    this.bloom.radius = Math.max(ws.bloom.radius, 0.8);
     this.bloom.threshold = ws.bloom.threshold;
+    this.outline.setCamera(ws.camera);
+    this.outline.setSize2(this.width * this.ratio, this.height * this.ratio);
+    this.outline.enabled = this.quality.tier !== 'low' || this.dynScale > 0.7;
     this.renderer.toneMappingExposure = ws.exposure;
     this.grade.uniforms.uTime.value = this.elapsed;
     const f = this.grade.uniforms.uFlash;

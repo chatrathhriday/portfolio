@@ -89,14 +89,19 @@ class LakeScene extends BaseScene {
       textureHeight: q.reflectionSize,
       waterNormals: waterNormals(),
       sunDirection: this.moonDir.clone(),
-      sunColor: 0x8ea2cc,
-      waterColor: 0x010307,
-      distortionScale: 2.6,
+      sunColor: 0x5a6a90,
+      waterColor: 0x0a1c3c,
+      distortionScale: 1.3,
       fog: true,
       alpha: 1,
     });
     this.water.rotation.x = -Math.PI / 2;
-    (this.water.material as THREE.ShaderMaterial).uniforms.size.value = 3.2;
+    // Painted look: deeper, darker water with a soft moon glint instead of a hard hotspot.
+    const wm = this.water.material as THREE.ShaderMaterial;
+    wm.fragmentShader = wm.fragmentShader
+      .replace('reflectionSample * 0.9 + reflectionSample * specularLight', 'reflectionSample * 0.5 + reflectionSample * specularLight * 0.25')
+      .replace('vec3( 0.1 )', 'vec3( 0.02, 0.04, 0.09 )');
+    (this.water.material as THREE.ShaderMaterial).uniforms.size.value = 1.4; // broad, calm ripples
     this.scene.add(this.water);
 
     // Castle on the far shore

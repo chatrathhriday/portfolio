@@ -16,7 +16,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run check      # typecheck + content check + production build
 npm run preview    # serve the production build
-npm run assets     # re-download and re-compress the Poly Haven assets (already committed)
+npm run assets     # re-download the four Poly Haven props (already committed)
 ```
 
 `npm run check:content -- --online` also requests every link in the content file and reports any that are broken.
@@ -58,8 +58,9 @@ The **Spellbook** jumps straight to any chapter and marks the ones you've visite
 
 Vite + TypeScript + Three.js + GSAP.
 
-- **Assets:** photo-scanned CC0 textures, HDRI lighting, a photographic night sky and props from [Poly Haven](https://polyhaven.com), compressed to WebP by `scripts/fetch-assets.mjs` (about 11 MB in total, loaded per scene; see `public/assets/CREDITS.md`).
-- **Generated in code:** the train, castle, hall architecture, particles and all sound. If any asset fails to load, the scene falls back to its procedural version instead of breaking.
+- **Art style:** hand-painted anime look. Cel shading (`core/toon.ts`), ink outlines (`core/outline.ts`), painted textures and skies drawn in code (`core/painted.ts`, `fx/atmosphere.ts`), no film grain.
+- **Assets:** only four small CC0 props from [Poly Haven](https://polyhaven.com) (lantern, suitcase, goblets, plates; about 1.4 MB, see `public/assets/CREDITS.md`).
+- **Generated in code:** the train, castle, hall architecture, particles and all sound. If a prop fails to load, the scene simply goes on without it.
 - **Rendering:** multisampled post-processing (no jagged edges), ACES tone mapping, bloom, a colour grade, and soft shadows on capable GPUs.
 - **Camera:** spring-damped, so every move eases in and out.
 - **Music:** an original ambient score, slow strings under a celesta-like bell line, composed procedurally in `core/audio.ts` (not the film theme). Sound and music stay off until the visitor turns them on, from the ticket or the speaker icon.

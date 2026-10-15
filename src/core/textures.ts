@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { makeFbm, mulberry32 } from './noise';
+import { painted } from './painted';
 
 const cache = new Map<string, THREE.Texture>();
 
@@ -53,91 +54,32 @@ export interface PbrSet {
  * `rows` × `cols` blocks per tile, running bond.
  */
 export function stoneBlocks(key: string, opts: { size?: number; rows?: number; cols?: number; tint?: [number, number, number]; seed?: number } = {}): PbrSet {
-  const ck = 'stone:' + key;
-  if (cache.has(ck + ':map')) return { map: cache.get(ck + ':map')!, normalMap: cache.get(ck + ':n')! };
-  const size = opts.size ?? 512, rows = opts.rows ?? 6, cols = opts.cols ?? 3;
-  const tint = opts.tint ?? [92, 88, 84];
-  const fbm = makeFbm(4, 5, opts.seed ?? 11);
-  const fine = makeFbm(32, 2, (opts.seed ?? 11) + 5);
-  const rnd = mulberry32(opts.seed ?? 3);
-  const blockShade: number[] = [];
-  for (let i = 0; i < rows * cols * 2; i++) blockShade.push(0.75 + rnd() * 0.4);
-  const { c, g } = canvas(size);
-  const img = g.createImageData(size, size);
-  const height = new Float32Array(size * size);
-  const bh = size / rows, mortar = size * 0.012;
-  for (let y = 0; y < size; y++) {
-    const row = Math.floor(y / bh);
-    const offset = (row % 2) * (size / cols / 2);
-    const by = y - row * bh;
-    for (let x = 0; x < size; x++) {
-      const xx = (x + offset) % size;
-      const bw = size / cols;
-      const col = Math.floor(xx / bw);
-      const bx = xx - col * bw;
-      const edge = Math.min(bx, bw - bx, by, bh - by);
-      const u = x / size, v = y / size;
-      const n = fbm(u, v), f = fine(u, v);
-      const inMortar = edge < mortar;
-      const bevel = Math.min(1, edge / (mortar * 3));
-      const shade = blockShade[(row * cols + col) % blockShade.length];
-      let hgt = inMortar ? 0.1 : 0.55 + bevel * 0.3 + (n - 0.5) * 0.35 + (f - 0.5) * 0.15;
-      if (!inMortar && n < 0.32) hgt -= 0.15; // chips
-      height[y * size + x] = hgt;
-      const grime = Math.pow(1 - v, 0.0) * (0.85 + n * 0.3);
-      const k = inMortar ? 0.55 : shade * (0.75 + n * 0.45 + (f - 0.5) * 0.18) * grime;
-      const i = (y * size + x) * 4;
-      img.data[i] = Math.min(255, tint[0] * k);
-      img.data[i + 1] = Math.min(255, tint[1] * k);
-      img.data[i + 2] = Math.min(255, tint[2] * k * 1.02);
-      img.data[i + 3] = 255;
-    }
-  }
-  g.putImageData(img, 0, 0);
-  const map = finish(new THREE.CanvasTexture(c));
-  const normalMap = heightToNormal(height, size, size, 6);
-  cache.set(ck + ':map', map);
-  cache.set(ck + ':n', normalMap);
-  return { map, normalMap };
+  // Painted style: flat tones and soft bevels instead of per-pixel noise (see core/painted.ts).
+  const t = opts.tint ?? [92, 88, 84];
+  const base = '#' + new THREE.Color(Math.min(1, (t[0] / 255) * 1.6), Math.min(1, (t[1] / 255) * 1.6), Math.min(1, (t[2] / 255) * 1.6)).getHexString();
+  const rows = opts.rows ?? 6, cols = opts.cols ?? 3;
+  const map = painted({ kind: rows >= 12 ? 'flagstones' : 'blocks', base, rows: Math.min(rows, 8), cols, seed: opts.seed ?? key.length, size: opts.size ?? 512 });
+  return { map, normalMap: flatNormal() };
 }
 
 /** Paving flagstones (square slabs, irregular shading). */
 export function flagstones(seed = 21): PbrSet {
-  return stoneBlocks('flag' + seed, { rows: 4, cols: 4, tint: [78, 76, 74], seed, size: 512 });
+  return { map: painted({ kind: 'flagstones', base: '#8e8a86', rows: 4, seed }), normalMap: flatNormal() };
 }
 
-/** Wood planks with grain. */
+/** Wood planks with a few calm grain strokes. */
 export function woodPlanks(tint: [number, number, number] = [92, 58, 34], seed = 5): PbrSet {
-  const ck = 'wood:' + tint.join(',') + seed;
-  if (cache.has(ck)) return { map: cache.get(ck)!, normalMap: cache.get(ck + 'n')! };
-  const size = 256;
-  const fbm = makeFbm(2, 4, seed);
-  const rnd = mulberry32(seed);
-  const planks = 4;
-  const shades = Array.from({ length: planks }, () => 0.8 + rnd() * 0.35);
-  const { c, g } = canvas(size);
-  const img = g.createImageData(size, size);
-  const height = new Float32Array(size * size);
-  for (let y = 0; y < size; y++)
-    for (let x = 0; x < size; x++) {
-      const p = Math.floor((y / size) * planks);
-      const py = (y / size) * planks - p;
-      const grain = Math.sin((x / size) * 40 + fbm(x / size, y / size) * 18 + p * 3) * 0.5 + 0.5;
-      const seam = py < 0.04 || py > 0.96 ? 0.45 : 1;
-      const k = shades[p] * (0.7 + grain * 0.35) * seam;
-      const i = (y * size + x) * 4;
-      img.data[i] = tint[0] * k;
-      img.data[i + 1] = tint[1] * k;
-      img.data[i + 2] = tint[2] * k;
-      img.data[i + 3] = 255;
-      height[y * size + x] = seam < 1 ? 0 : 0.5 + grain * 0.2;
-    }
-  g.putImageData(img, 0, 0);
-  const map = finish(new THREE.CanvasTexture(c));
-  const normalMap = heightToNormal(height, size, size, 3);
-  cache.set(ck, map);
-  cache.set(ck + 'n', normalMap);
-  return { map, normalMap };
+  const base = '#' + new THREE.Color(Math.min(1, (tint[0] / 255) * 1.5), Math.min(1, (tint[1] / 255) * 1.5), Math.min(1, (tint[2] / 255) * 1.5)).getHexString();
+  return { map: painted({ kind: 'planks', base, rows: 4, seed, size: 256 }), normalMap: flatNormal() };
+}
+
+/** 1×1 flat normal map (kept for API compatibility; toon shading ignores it). */
+function flatNormal() {
+  if (cache.has('flatN')) return cache.get('flatN')!;
+  const t = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1);
+  t.needsUpdate = true;
+  cache.set('flatN', t);
+  return t;
 }
 
 /** Tileable water normal map for three's Water shader. */
@@ -256,7 +198,7 @@ export function parchment(w = 512, h = 640, seed = 9): HTMLCanvasElement {
       const n = fbm(x / w, y / h);
       const ex = Math.min(x, w - x) / w, ey = Math.min(y, h - y) / h;
       const edge = Math.min(1, Math.min(ex, ey) * 9);
-      const k = (0.72 + n * 0.35) * (0.55 + edge * 0.45);
+      const k = (0.86 + n * 0.14) * (0.72 + edge * 0.28);
       const i = (y * w + x) * 4;
       img.data[i] = 236 * k;
       img.data[i + 1] = 218 * k;

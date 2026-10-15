@@ -52,7 +52,7 @@ export class DriftField extends THREE.Points {
         uSpeed: { value: o.speed ?? 0.15 },
         uRise: { value: o.rise ?? 0 },
         uOpacity: { value: o.opacity ?? 1 },
-        uTwinkle: { value: o.twinkle ?? 0.5 },
+        uTwinkle: { value: (o.twinkle ?? 0.5) * 0.4 }, // gentle, never sparkly
         uMap: { value: softDot() },
         ...pointUniforms,
       },

@@ -42,7 +42,8 @@ async function start() {
   progress(0.05, 'Gathering steam');
   // Fonts are drawn into canvas textures (signs, plates), so wait briefly for them.
   const fonts = Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]);
-  const [{ Engine }, { Director }, { ui }] = await Promise.all([import('./core/Engine'), import('./core/Director'), import('./ui/ui'), fonts]);
+  const [{ Engine }, { Director }, { ui }, { installToonShading }] = await Promise.all([import('./core/Engine'), import('./core/Director'), import('./ui/ui'), import('./core/toon'), fonts]);
+  installToonShading(); // anime cel shading — must run before any material compiles
   progress(0.2, 'Polishing the brass');
 
   let engine: InstanceType<typeof Engine>;

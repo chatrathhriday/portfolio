@@ -12,23 +12,12 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const cache = path.join(root, '.asset-cache');
 const out = path.join(root, 'public', 'assets');
 
-/** id → output size (px) */
-const TEXTURES = {
-  castle_brick_07: 1024, // Great Hall walls
-  stone_tiles_02: 1024, // Great Hall floor
-  wood_table_worn: 1024, // house tables, benches
-  castle_wall_slates: 512, // castle exterior (seen from the lake)
-  roof_slates_02: 512, // castle roofs
-  rock_face_03: 1024, // cliffs
-  stone_pavers: 1024, // station platform
-  brick_wall_02: 1024, // station back wall
-  weathered_planks: 512, // boats
-  medieval_blocks_02: 1024, // entrance hall
-};
+/** Painted (anime) style: surfaces are drawn in code (src/core/painted.ts), so no photo textures. */
+const TEXTURES = {};
 /** HDRIs used for image-based lighting (1k .hdr is plenty for reflections). */
-const HDRIS = ['dresden_station_night', 'qwantani_moonrise_puresky', 'rostock_arches'];
+const HDRIS = []; // toon shading doesn't use image-based lighting
 /** Photographic sky backgrounds (tonemapped, resized). */
-const SKIES = { qwantani_moonrise_puresky: 4096 };
+const SKIES = {}; // skies are painted in a shader
 /** Props, packed to .glb with gltf-transform and WebP textures. */
 const MODELS = { wooden_lantern_01: 512, vintage_suitcase: 512, brass_goblets: 256, carved_wooden_plate: 256 };
 
