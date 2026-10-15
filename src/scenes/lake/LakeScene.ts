@@ -24,6 +24,8 @@ import { portfolio } from '../../content/portfolio';
 
 const CASTLE_Z = -340;
 const RIDE_SECONDS = 30;
+/** Hull rim sits at the boat origin with the hull below it; lift so ~1/3 of the hull is under water. */
+const FLOAT_Y = 0.36;
 /** Rotates the photographic sky so its moon sits beside the castle. */
 const SKY_ROT = 0;
 
@@ -170,12 +172,12 @@ class LakeScene extends BaseScene {
     g.lookAt(ahead.x, pos.y, ahead.z);
     g.rotateY(Math.PI); // model bow is -Z; lookAt points +Z toward target
     const bob = reduced ? 0 : 1;
-    g.position.y = 0.05 + Math.sin(this.t * 1.3) * 0.06 * bob;
+    g.position.y = FLOAT_Y + Math.sin(this.t * 1.3) * 0.05 * bob;
     g.rotation.z += Math.sin(this.t * 0.9) * 0.025 * bob;
     g.rotateX(Math.sin(this.t * 1.1 + 1) * 0.015 * bob);
 
     // camera seated in the stern, slightly above the gunwale
-    const camLocal = new THREE.Vector3(0.0, 1.45, 1.35);
+    const camLocal = new THREE.Vector3(0.0, 1.2, 1.35);
     this.camera.position.copy(camLocal.applyMatrix4(g.matrixWorld.compose(g.position, g.quaternion, g.scale)));
     // look ahead along the water, tilting up toward the castle near the end
     const castleFocus = this.castle.focus.clone().add(this.castle.group.position);
@@ -195,7 +197,7 @@ class LakeScene extends BaseScene {
       const q = Math.max(0, Math.min(1, p + o.offset.z * -0.0008));
       const bp = this.path.getPointAt(q, new THREE.Vector3());
       const bah = this.path.getPointAt(Math.min(1, q + 0.01), new THREE.Vector3());
-      b.position.set(bp.x + o.offset.x + Math.sin(this.t * 0.2 + o.phase) * 0.8, 0.05 + Math.sin(this.t * 1.2 + o.phase) * 0.06 * bob, bp.z + o.offset.z);
+      b.position.set(bp.x + o.offset.x + Math.sin(this.t * 0.2 + o.phase) * 0.8, FLOAT_Y + Math.sin(this.t * 1.2 + o.phase) * 0.05 * bob, bp.z + o.offset.z);
       b.lookAt(bah.x + o.offset.x, b.position.y, bah.z + o.offset.z);
       b.rotateY(Math.PI);
       b.rotation.z += Math.sin(this.t + o.phase) * 0.03 * bob;

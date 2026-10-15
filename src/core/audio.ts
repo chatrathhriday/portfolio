@@ -4,6 +4,7 @@
  * the first user gesture (browser autoplay rules).
  */
 import { settings } from './settings';
+import { portfolio } from '../content/portfolio';
 
 type Ambience = 'station' | 'lake' | 'hall' | 'none';
 
@@ -115,13 +116,42 @@ class AudioEngine {
     this.mood = kind === 'station' ? { density: 0.22, brightness: 0.5 } : kind === 'lake' ? { density: 0.32, brightness: 0.6 } : { density: 0.42, brightness: 0.8 };
   }
 
+  private track: HTMLAudioElement | null = null;
+  private trackFailed = false;
+
+  /** Plays the visitor-supplied music file (portfolio.music.file) if there is one. */
+  private startTrack(): boolean {
+    const file = portfolio.music.file.trim();
+    if (!file || this.trackFailed || !this.ctx) return false;
+    if (!this.track) {
+      const el = new Audio(file);
+      el.loop = true;
+      el.crossOrigin = 'anonymous';
+      el.addEventListener('error', () => {
+        console.warn('[audio] music file failed, using the generated score', file);
+        this.trackFailed = true;
+        this.track = null;
+        this.startMusic();
+      });
+      const src = this.ctx.createMediaElementSource(el);
+      const g = this.ctx.createGain();
+      g.gain.value = portfolio.music.volume;
+      src.connect(g).connect(this.master);
+      this.track = el;
+    }
+    this.track.play().catch(() => {});
+    return true;
+  }
+
   private startMusic() {
+    if (this.startTrack()) return;
     if (!this.ctx || this.musicTimer) return;
     this.musicNext = this.ctx.currentTime + 0.3;
     this.musicTimer = window.setInterval(() => this.scheduleMusic(), 120);
   }
 
   private stopMusic() {
+    this.track?.pause();
     clearInterval(this.musicTimer);
     this.musicTimer = 0;
   }

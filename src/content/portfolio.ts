@@ -66,6 +66,17 @@ export const portfolio = {
     class: 'First Year',
   },
 
+  /* ── Music ─────────────────────────────────────────────────────────────── */
+  music: {
+    /**
+     * Optional: your own music file, e.g. './music/theme.mp3' (put it in /public/music).
+     * Only use audio you have the rights to publish. Leave '' to use the original
+     * score that is generated in code.
+     */
+    file: './music/theme.mp3', // local file — kept out of git (see .gitignore)
+    volume: 0.6,
+  },
+
   /* ── Boat ride captions (Scene 2) ─────────────────────────────────────── */
   // DRAFT — edit freely. They fade in one after another as the boat crosses the lake.
   lakeCaptions: [

@@ -4,3 +4,8 @@ dist
 .DS_Store
 .claude/
 .asset-cache/
+
+# Music you supply locally (may be copyrighted) — not published to the repo
+public/music/*.mp3
+public/music/*.ogg
+public/music/*.m4a
