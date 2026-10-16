@@ -149,7 +149,7 @@ export const portfolio = {
       problem:
         'Construction sites create dust, heat stress and embodied carbon long before a building is occupied, yet developers rarely see those impacts — or what mitigation would change — before they break ground.',
       contribution:
-        'Worked on the backend: the server that fetches and caches the live environmental data feeds and generates the assessment report.',
+        'Team project — I worked on the backend: the server that fetches and caches the live environmental data and generates the assessment report.',
       tech: ['TypeScript', 'React · Vite', 'CesiumJS', 'Google Photorealistic 3D Tiles', 'Web Workers', 'Zustand', 'Hono', 'Playwright (PDF)', 'Gemini / Groq'],
       features: [
         'Your building as a 3D model at its real location on photorealistic 3D tiles',
@@ -161,7 +161,7 @@ export const portfolio = {
       ],
       note: 'Screening-level (Tier 1–2) models, labelled as indicative — not regulatory dispersion modelling.',
       links: [
-        { label: 'Source on GitHub', url: '', kind: 'repo' }, // no public repo yet — add the URL when there is one
+        { label: 'Source on GitHub', url: 'https://github.com/chatrathhriday/Envelope', kind: 'repo' },
         { label: 'Live demo', url: '', kind: 'live' },
       ],
     },
