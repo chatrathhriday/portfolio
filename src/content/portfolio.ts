@@ -73,7 +73,7 @@ export const portfolio = {
      * Only use audio you have the rights to publish. Leave '' to use the original
      * score that is generated in code.
      */
-    file: './music/theme.mp3', // local file — kept out of git (see .gitignore)
+    file: './music/mystery-magic.mp3', // "Mystery Magic" by HitsLab (Pixabay Content License)
     volume: 0.6,
   },
 
