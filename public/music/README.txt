@@ -1,2 +1,4 @@
-Put a music file you have the rights to here (e.g. theme.mp3)
-and set portfolio.music.file = './music/theme.mp3' in src/content/portfolio.ts.
+Site music lives here.
+
+- mystery-magic.mp3: "Mystery Magic" by HitsLab, via Pixabay (Pixabay Content License). Committed so the deployed site has it.
+- Any other audio files here are git-ignored, so copyrighted tracks you test locally never get published.

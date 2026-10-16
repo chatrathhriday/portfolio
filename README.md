@@ -1,5 +1,7 @@
 # The Journey — Hriday Chatrath's portfolio
 
+**Live site:** https://chatrathhriday.github.io/portfolio/ (deployed automatically from `main` by GitHub Actions)
+
 An interactive, Wizarding World–inspired 3D journey. Visitors punch a ticket on Platform 9¾, cross the Black Lake by boat while captions introduce the portfolio, then walk through the great doors into the Great Hall. There, four spells are cast one after another:
 
 | Spell | Reveals | What happens |

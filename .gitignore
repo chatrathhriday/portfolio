@@ -9,3 +9,5 @@ dist
 public/music/*.mp3
 public/music/*.ogg
 public/music/*.m4a
+# Licensed for use on this site (Pixabay Content License) — needed by the deployed build
+!public/music/mystery-magic.mp3
