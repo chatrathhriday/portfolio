@@ -36,7 +36,7 @@ export function showTicket(onBoard: () => void) {
   const invite = el.querySelector<HTMLButtonElement>('.sound-invite')!;
   const paint = () => {
     const on = settings.get().sound;
-    invite.textContent = on ? '♪ Sound and music on' : '♪ Travel with sound and music';
+    invite.textContent = on ? '♪ Sound and music on · tap to mute' : '♪ Turn sound and music on';
     invite.setAttribute('aria-pressed', String(on));
   };
   paint();

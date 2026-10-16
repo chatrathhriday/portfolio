@@ -2,7 +2,7 @@
 
 type Listener = () => void;
 
-const KEY = 'hp-portfolio-settings-v2';
+const KEY = 'hp-portfolio-settings-v3';
 
 function load(): Partial<SettingsState> {
   try {
@@ -23,7 +23,7 @@ const prefersReduced =
   typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const state: SettingsState = {
-  sound: false, // off until the visitor turns it on
+  sound: true, // on by default; audio actually starts on the visitor's first click (browser rule)
   reducedMotion: prefersReduced,
   lightGraphics: false,
   ...load(),

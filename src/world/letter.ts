@@ -112,6 +112,9 @@ function letterSheet() {
   return tex(c);
 }
 
+/** Sheet scale while sealed: small enough to hide completely inside the envelope. */
+const FOLDED = 0.5;
+
 export function buildLetter(): Letter {
   const W = 1.1, H = 0.73;
   const group = new THREE.Group();
@@ -178,7 +181,8 @@ export function buildLetter(): Letter {
   const sheet = new THREE.Mesh(sheetGeo, sheetMat);
   sheet.rotation.y = Math.PI;
   sheet.position.set(0, 0, -0.002);
-  sheet.scale.setScalar(0.98);
+  sheet.scale.setScalar(FOLDED);
+  sheet.visible = false;
   group.add(sheet);
   const sheetH = W * 0.92 * (1360 / 1024);
 
@@ -189,14 +193,16 @@ export function buildLetter(): Letter {
     setOpen(v) {
       hinge.rotation.x = -ss(v, 0.04, 0.32) * 2.7;
       seal.scale.setScalar(1 - ss(v, 0, 0.1) * 0.2);
-      // slide up out of the envelope
+      // While sealed the letter is folded small enough to sit fully inside the
+      // envelope (hidden between front and back); it unfolds as it slides out.
       const slide = ss(v, 0.28, 0.62);
+      sheet.visible = v > 0.02;
       sheet.position.y = slide * (sheetH * 0.62);
       // lift free toward the viewer and settle centred, a little larger
       const free = ss(v, 0.6, 1);
       sheet.position.y = THREE.MathUtils.lerp(sheet.position.y, 0.12, free);
       sheet.position.z = -0.002 - free * 0.35;
-      sheet.scale.setScalar(0.98 + free * 0.1);
+      sheet.scale.setScalar(FOLDED + (0.98 - FOLDED) * slide + free * 0.1);
       // the envelope drops away and fades
       env.position.y = -free * 0.9;
       env.rotation.z = free * 0.25;

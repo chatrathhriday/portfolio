@@ -57,6 +57,10 @@ async function start() {
   }
   const director = new Director(engine);
   ui.init(director);
+  // Browsers only allow audio after a user gesture: start it on the very first click, tap or key.
+  const { audio } = await import('./core/audio');
+  const firstGesture = () => audio.unlock();
+  for (const ev of ['pointerdown', 'keydown', 'touchstart'] as const) window.addEventListener(ev, firstGesture, { once: true, capture: true });
   setFallbackHooks({ pause: () => engine.stop(), resume: () => engine.start() });
 
   engine.canvas.addEventListener('webglcontextlost', (e) => {
@@ -92,7 +96,7 @@ async function start() {
         await new Promise((r) => setTimeout(r, 16));
       }
     };
-    (window as unknown as Record<string, unknown>).__journey = { director, engine, ui, pump };
+    (window as unknown as Record<string, unknown>).__journey = { director, engine, ui, pump, audio };
   }
 }
 
