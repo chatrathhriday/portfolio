@@ -83,4 +83,6 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the scene contract and th
 - No WebGL, a lost context, or a scene that fails to load: the visitor gets a retry option or the parchment version.
 - Without JavaScript, a `<noscript>` message shows.
 
+Built with AI assistance (Claude) for implementation speed; the idea, design decisions, testing and final calls are mine.
+
 *Harry Potter and the Wizarding World belong to their respective owners. This is a non-commercial, fan-inspired personal portfolio.*
